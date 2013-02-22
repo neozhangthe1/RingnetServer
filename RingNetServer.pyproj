@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <Name>RingNetServer</Name>
+    <RootNamespace>RingNetServer</RootNamespace>
+    <UseIISExpress>true</UseIISExpress>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>a69f320d-08b1-4503-8a3b-3e7a45dfb732</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <ProjectTypeGuids>{5F0BE9CA-D677-4A4D-8806-6076C0FAAD37};{349c5851-65df-11da-9384-00065b846f21};{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <StartupFile>manage.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <LaunchProvider>Django launcher</LaunchProvider>
+    <OutputPath>.</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="manage.py" />
+    <Compile Include="RingNetServer\algorithm\community.py" />
+    <Compile Include="RingNetServer\algorithm\topic.py" />
+    <Compile Include="RingNetServer\algorithm\__init__.py" />
+    <Compile Include="RingNetServer\backup\deprecated.py" />
+    <Compile Include="RingNetServer\databases.py" />
+    <Compile Include="RingNetServer\database\mongo.py" />
+    <Compile Include="RingNetServer\database\mysql.py" />
+    <Compile Include="RingNetServer\database\redispy.py" />
+    <Compile Include="RingNetServer\database\__init__.py" />
+    <Compile Include="RingNetServer\objects.py" />
+    <Compile Include="RingNetServer\preprocess\network.py" />
+    <Compile Include="RingNetServer\preprocess\__init__.py" />
+    <Compile Include="RingNetServer\ringnet\models.py" />
+    <Compile Include="RingNetServer\ringnet\pattern.py" />
+    <Compile Include="RingNetServer\ringnet\tests.py" />
+    <Compile Include="RingNetServer\ringnet\urls.py" />
+    <Compile Include="RingNetServer\ringnet\views.py" />
+    <Compile Include="RingNetServer\ringnet\__init__.py" />
+    <Compile Include="RingNetServer\__init__.py" />
+    <Compile Include="RingNetServer\settings.py" />
+    <Compile Include="RingNetServer\urls.py" />
+    <Compile Include="RingNetServer\wsgi.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <WebPiReference Include="https://www.microsoft.com/web/webpi/3.0/toolsproductlist.xml%3fDjango">
+      <Feed>https://www.microsoft.com/web/webpi/3.0/toolsproductlist.xml</Feed>
+      <ProductId>Django</ProductId>
+      <FriendlyName>Django 1.4</FriendlyName>
+    </WebPiReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="RingNetServer\" />
+    <Folder Include="RingNetServer\algorithm\" />
+    <Folder Include="RingNetServer\database\" />
+    <Folder Include="RingNetServer\backup\" />
+    <Folder Include="RingNetServer\preprocess\" />
+    <Folder Include="RingNetServer\ringnet" />
+    <Folder Include="RingNetServer\ringnet\Templates" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="RingNetServer\ringnet\Templates\ringnet.html" />
+  </ItemGroup>
+  <Import Project="$(VSToolsPath)\Python Tools\Microsoft.PythonTools.Django.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:63817/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}" User="">
+        <WebProjectProperties>
+          <StartPageUrl>
+          </StartPageUrl>
+          <StartAction>CurrentPage</StartAction>
+          <AspNetDebugging>True</AspNetDebugging>
+          <SilverlightDebugging>False</SilverlightDebugging>
+          <NativeDebugging>False</NativeDebugging>
+          <SQLDebugging>False</SQLDebugging>
+          <ExternalProgram>
+          </ExternalProgram>
+          <StartExternalURL>
+          </StartExternalURL>
+          <StartCmdLineArguments>
+          </StartCmdLineArguments>
+          <StartWorkingDirectory>
+          </StartWorkingDirectory>
+          <EnableENC>False</EnableENC>
+          <AlwaysStartWebServerOnDebug>False</AlwaysStartWebServerOnDebug>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>
