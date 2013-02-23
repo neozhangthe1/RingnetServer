@@ -51,7 +51,6 @@ for line in topic_dis_f:
     inx+=1
 print type(word_dis)
 
-
 for line in topic_f:
     x = line.split(' ')
     t = []
@@ -60,8 +59,6 @@ for line in topic_f:
     topics_label.append(t)
 topic_adj = pickle.load(open(os.path.join(settings.RES[0],"topic_adj_w.pickle").replace('\\','/')))
 author_topic = pickle.load(open(os.path.join(settings.RES[0],"selected_author_topics.pickle").replace('\\','/')))
-
-
 
 def get_top_authors(topics, lim):
     import redis 
@@ -173,7 +170,6 @@ def cluster_author_by_topic_dist(authors,years):
             clusters[y][res[i]].append(author_index.keys()[i])
             clusters_dict[author_index.keys()[i]][y] = res[i]
     return clusters,clusters_dict,cluster_center
-
 
 def get_author_weight(authors,topics,years):
     author_topic_dist = defaultdict(lambda: defaultdict(lambda: [0.0 for i in range(len(topics))]))
@@ -303,7 +299,7 @@ def render_topic(request):
         pass
     start_year = int(request.GET['start'])
     end_year = int(request.GET['end'])
-    author = request.GET['author']
+    author = request.GET['jconf']
     authors = get_topic_by_author(author)
     #papers,authors = mysql_client.get_paper_by_jconf(jconf)
     #author_topic = {}
@@ -312,6 +308,7 @@ def render_topic(request):
     author_set = []
     years = range(start_year,end_year)
     at_col = pymongo.Connection("10.1.1.110",12345)['ringnet']['author_topic']
+    topic_sum = defaultdict(int)
     for a in authors:
         try:
             cur = at_col.find({"_id":int(a)})
@@ -324,13 +321,19 @@ def render_topic(request):
                 if y in item['topics']['years']:
                     i = year2index[y]
                     topic_set.add(item['topics']['max'][i][0])
+                    for t in range(200):
+                        topic_sum[t]+=item['topics']['all'][i][t]
         except Exception,e:
             pass
             #print "exp %s"%a
             #print e
+    selected_topics = {}
+    topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:6]]
+    for i in range(len(topics)):
+        selected_topics[i]=[topics[i]]
     pattern = {"anchors":{}, "items":[], "links":[], "trajectories":[]}
-    selected_topics = {0:[175],1:[103],2:[87],3:[127],4:[190],5:[109]}#cluster_topics_aff(list(topic_set))#
-    topics = [175,103,87,125,190,107]
+    #selected_topics = {0:[175],1:[103],2:[87],3:[127],4:[190],5:[109]}#cluster_topics_aff(list(topic_set))#
+    #topics = [175,103,87,125,190,107]
     #selected_topics = {}
     #i = 0
     #for t in topics:
@@ -773,8 +776,10 @@ def render_community(request):
     pass
 
 def ringnet(request):
+    print settings.STATICFILES_DIRS
     mysql_client = mysql.Mysql()
-    jconf = mysql_client.get_conference()
+    au = get_top_authors(range(200),5)
+    jconf = mysql_client.get_authors_name(list(au))#mysql_client.get_conference()
     return render_to_response("ringnet.html", {"jconf":jconf})
 
 def render_egonet(request):

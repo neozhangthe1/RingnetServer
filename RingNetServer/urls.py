@@ -1,5 +1,7 @@
 from django.conf.urls import patterns, include, url
 from RingNetServer.ringnet import urls
+from django.conf import settings
+
 
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
@@ -10,6 +12,7 @@ urlpatterns = patterns('',
     # url(r'^$', 'RingNetServer.views.home', name='home'),
     # url(r'^RingNetServer/', include('RingNetServer.RingNetServer.urls')),
     url(r'^ringnet/', include('RingNetServer.ringnet.urls')),
+    url(r'^static/(?P<path>.*)$', 'django.views.static.serve',{'document_root':settings.STATIC_ROOT,'show_indexes':True}),
     # Uncomment the admin/doc line below to enable admin documentation:
     # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 

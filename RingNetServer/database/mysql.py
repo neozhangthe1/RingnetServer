@@ -5,6 +5,7 @@ Created on Dec 18, 2012
 '''
 
 import MySQLdb
+from bs4 import UnicodeDammit
 
 SQL_GET_PUBLICATION = "SELECT id,title,jconf,year FROM publication WHERE year>1999"
 SQL_GET_ABSTRACT = "SELECT abstract FROM publication_ext WHERE id = %s"
@@ -15,7 +16,7 @@ SQL_GET_RELATION = "SELECT pid1,pid2,similarity,rel_type FROM na_person_relation
 SQL_GET_JCONF = "SELECT id,name,score FROM jconf"
 SQL_GET_JCONF_TOPIC = "SELECT * FROM conftopic WHERE conference_id = %s"
 SQL_GET_PUBLICATION_BY_JCONF = "SELECT p.id,p.title,p.jconf,p.year,a.aid FROM publication p,na_author2pub a WHERE jconf = %s AND year>%s AND year<%s AND p.id = a.pid"
-
+SQL_GET_AUTHORS_NAME = "SELECT id,names FROM na_person WHERE id in %s"
 DB_HOST = "10.1.1.110"
 DB_USER = "root"
 DB_PORT = 3306
@@ -84,6 +85,14 @@ class Mysql(object):
                 coauthors.add(item[0])
                 coauthors.add(item[1])
         return list(coauthors)
+    
+    def filter_relation(self, res, threshold):
+        coauthors = set()
+        for item in res:
+            if item[2]>threshold:
+                coauthors.add(item[0])
+                coauthors.add(item[1])
+        return coauthors
 
     def get_two_hop_network(self, pid):
         coauthors = set()
@@ -101,7 +110,22 @@ class Mysql(object):
             one_hop+=str(c)
         one_hop = "("+one_hop+")"
         self.cur.execute(SQL_GET_COAUTHORS_NETWORK%(one_hop,one_hop))
-        return list(coauthors)
+        x = self.cur.fetchall()
+        floor = 0
+        ceiling = 50
+        cur = (floor+ceiling)/2
+        while True:
+            coauthors = self.filter_relation(x, floor)
+            if len(coauthors)<1000:
+                return list(coauthors)
+            coauthors = self.filter_relation(x, cur)
+            if len(coauthors)>1000:
+                floor = cur
+            elif len(coauthors)<500:
+                ceiling = cur
+            else:
+                return list(coauthors)
+            cur = (floor+ceiling)/2           
 
     def get_tight_relation(self, tightness = 50):
         self.cur.execute(SQL_GET_RELATION%(tightness))
@@ -112,9 +136,25 @@ class Mysql(object):
 
     def get_conference(self):
         self.cur.execute(SQL_GET_JCONF)
-        return self.cur.fetchall()
+        conf = []
+        for c in self.cur.fetchall():
+            conf.append((c[0],UnicodeDammit(c[1]).markup,c[2]))
+        return conf
 
     def get_conference_topic(self,jconf):
         self.cur.execute(SQL_GET_JCONF_TOPIC%jconf)
         return self.cur.fetchall()
 
+    def get_authors_name(self,aids):
+        id = ""
+        id+=str(aids[0])
+        for aid in aids[1:]:
+            id+=","
+            id+=str(aid)
+        id = "("+id+")"
+        self.cur.execute(SQL_GET_AUTHORS_NAME%id)
+        names = []
+        res = self.cur.fetchall()
+        for item in res:
+            names.append((item[0],UnicodeDammit(item[1]).markup))
+        return names

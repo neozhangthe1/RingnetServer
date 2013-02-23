@@ -1,35 +1,33 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>RingNet</title>
-	<script> var json = {} ;</script>
-	<script type="text/javascript" src="/static/js/community.js"></script>
-	<script type="text/javascript" src="/static/js/topic.json"></script>
-	<script type="text/javascript" src="/static/js/similarity.js"></script>
-	<script type="text/javascript" src="/static/js/mouseEvents.js"></script>
+<head>
+  <title>RingNet</title>
+  <script>var json = {} ;</script>
+  <script type="text/javascript" src="/static/js/community.js"></script>
+  <script type="text/javascript" src="/static/js/topic.json"></script>
+  <script type="text/javascript" src="/static/js/similarity.js"></script>
+  <script type="text/javascript" src="/static/js/mouseEvents.js"></script>
   <script src="http://d3js.org/d3.v2.min.js"></script>
   <script  type="text/javascript" src="/static/js/topic.json"></script>
   <script  type="text/javascript" src="/static/js/topicNames.json"></script>
   <script  type="text/javascript" src="/static/js/kmeans.js"></script>
-    <script type="text/javascript" src="/static/js/jquery-1.6.min.js"></script>
-	
-    <link type="text/css" rel="stylesheet" href="style.css"/>
-  </head>
-  <body>
-    <select id="jconf-select" style="width:500px;">
-      {% for i in jconf %}
-        <option class="jconf" value = "{{i.0}}">{{i.1}}</option>
-      {% endfor %}
-    </select>
-    start
-    <input id="input-start"/>
-    end
-    <input id="input-end"/>
-    <div id="chart"></div>
-    <script type="text/javascript" src="/static/js/ringnet.js"></script>
-    <script>
-
-    </script>
-    
-  </body>
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.1/themes/base/jquery-ui.css" />
+<script src="http://code.jquery.com/ui/1.10.1/jquery-ui.js"></script>
+  <link type="text/css" rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <select id="jconf-select" style="width:500px;">
+    {% for i in jconf %}
+    <option class="jconf" value = "{{i.0}}">{{i.1}}</option>
+    {% endfor %}
+  </select>
+  start
+  <input id="input-start"/>
+  end
+  <input id="input-end"/>
+  <div id="slider" style="width:500px;"></div>
+  <div id="chart"></div>
+  <script type="text/javascript" src="/static/js/ringnet.js"></script>
+</body>
 </html>
