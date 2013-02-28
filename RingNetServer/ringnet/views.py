@@ -31,10 +31,7 @@ topic_map = [int(line) for line in topic_map_f]
 
 alphabet_f = open(os.path.join(settings.RES[0],"alphabet.txt").replace('\\','/'))
 topic_dis_f = open(os.path.join(settings.RES[0],"topics.txt").replace('\\','/'))
-#alphabet_f = open("alphabet.txt")
-#topic_dis_f = open("topics.txt")
 alphabet = []
-print "hello"
 word_dis = defaultdict(lambda: [0.0 for i in range(200)])
 topic_dis = defaultdict(lambda: {})
 for line in alphabet:
@@ -49,7 +46,6 @@ for line in topic_dis_f:
         word_dis[int(z[0])][inx] = int(float(z[1]))
         topic_dis[inx][int(z[0])] = int(float(z[1]))
     inx+=1
-print type(word_dis)
 
 for line in topic_f:
     x = line.split(' ')
@@ -171,6 +167,7 @@ def cluster_author_by_topic_dist(authors,years):
             clusters_dict[author_index.keys()[i]][y] = res[i]
     return clusters,clusters_dict,cluster_center
 
+# get auther topic distribution of each years
 def get_author_weight(authors,topics,years):
     author_topic_dist = defaultdict(lambda: defaultdict(lambda: [0.0 for i in range(len(topics))]))
     for a in authors:
@@ -178,7 +175,6 @@ def get_author_weight(authors,topics,years):
         year2index = {}
         for i in range(len(a['topics']['years'])):
             year2index[a['topics']['years'][i]] = i
-        #lambda y, s = lambda x: x-1: year2index[y] if y in year2index year2index[s(y)]
         for y in years:
             if not y in year2index:
                 x = y
@@ -195,15 +191,8 @@ def get_author_weight(authors,topics,years):
         if flag != 0:
             print a["_id"]
             continue
-        #for y in years:
-        #    if not y in year2index:
-        #        flag = 1
-        #        break
-        #if flag == 1:
-        #    continue
         for y in years:
             for i in range(len(topics)):
-                #print i
                 author_topic_dist[a['_id']][y][i] = a['topics']['all'][year2index[y]][topics[i]]
     print len(author_topic_dist)
     return author_topic_dist
@@ -289,26 +278,10 @@ def render_topic_word(request):
     dump.close()
     return HttpResponse(json.dumps(pattern))
 
-def render_topic(request):
-    mysql_client = mysql.Mysql()
-    mongo_client = mongo.Mongo()
-    smooth = "smooth"
-    try:
-        smooth = request.GET['smooth']
-    except:
-        pass
-    start_year = int(request.GET['start'])
-    end_year = int(request.GET['end'])
-    author = request.GET['jconf']
-    authors = get_topic_by_author(author)
-    #papers,authors = mysql_client.get_paper_by_jconf(jconf)
-    #author_topic = {}
-    #for p in papers:
-    topic_set = set()
+# query the mongo db to get authors' topics and papers
+def get_author_info(authors):
     author_set = []
-    years = range(start_year,end_year)
-    at_col = pymongo.Connection("10.1.1.110",12345)['ringnet']['author_topic']
-    topic_sum = defaultdict(int)
+    topic_set = []
     for a in authors:
         try:
             cur = at_col.find({"_id":int(a)})
@@ -325,21 +298,73 @@ def render_topic(request):
                         topic_sum[t]+=item['topics']['all'][i][t]
         except Exception,e:
             pass
-            #print "exp %s"%a
-            #print e
+    selected_topics = {}
+    topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:6]]
+    for i in range(len(topics)):
+        selected_topics[i]=[topics[i]]
+    return author_set, topic_set, selected_topics
+
+# get author's papers in each year
+def get_author_papers(authors, years):
+    author_papers = {}
+    year_max = defaultdict(lambda: 0)
+    for a in authors:
+        papers = {}
+        year2index = {}
+        for i in range(len(item['papers'])):
+            year2index[item['papers'][i]['year']] = i
+        for y in years:
+            if y in year2index:
+                i = year2index[y]
+                papers[y] = item['papers'][i]['papers']
+                if len(papers[y])>year_max[y]:
+                    year_max[y] = len(papers[y])
+        author_papers[a['_id']] = papers
+    return author_papers, year_max
+
+# render topic to json
+def render_topic(request):
+    mysql_client = mysql.Mysql()
+    mongo_client = mongo.Mongo()
+    smooth = "smooth"
+    try:
+        smooth = request.GET['smooth']
+    except:
+        pass
+    start_year = int(request.GET['start'])
+    end_year = int(request.GET['end'])
+    author = request.GET['jconf']
+    authors = get_topic_by_author(author)
+    topic_set = set()
+    author_set = []
+    years = range(start_year,end_year)
+    at_col = pymongo.Connection("10.1.1.110",12345)['ringnet']['author_topic']
+    topic_sum = defaultdict(int)
+    print "get authors info..."
+    for a in authors:
+        try:
+            cur = at_col.find({"_id":int(a)})
+            item = cur.next()
+            author_set.append(item)
+            year2index = {}
+            for i in range(len(item['topics']['years'])):
+                year2index[item['topics']['years'][i]] = i
+            for y in years:
+                if y in item['topics']['years']:
+                    i = year2index[y]
+                    topic_set.add(item['topics']['max'][i][0])
+                    for t in range(200):
+                        topic_sum[t]+=item['topics']['all'][i][t]
+        except Exception,e:
+            pass
     selected_topics = {}
     topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:6]]
     for i in range(len(topics)):
         selected_topics[i]=[topics[i]]
     pattern = {"anchors":{}, "items":[], "links":[], "trajectories":[]}
-    #selected_topics = {0:[175],1:[103],2:[87],3:[127],4:[190],5:[109]}#cluster_topics_aff(list(topic_set))#
-    #topics = [175,103,87,125,190,107]
-    #selected_topics = {}
-    #i = 0
-    #for t in topics:
-    #    selected_topics[i] = [topic_map[t]]
-    #    i+=1
+    print "get authors weight..."
     topic_weight_dist = get_author_weight(author_set,topics,years)
+    print "cluster authors..."
     clusters,cluster_dict,cluster_center = cluster_author_by_topic_dist(topic_weight_dist,years)
     topic_cluster_dict = {}
     for i in range(len(selected_topics)):
@@ -348,6 +373,7 @@ def render_topic(request):
     for a in range(len(selected_topics)):
         pattern['anchors'][a] = [{"year":year,"weight":len(selected_topics[a])*10, "topic":selected_topics[a]} for year in range(start_year,end_year)]#[topics_label[x][:3] for x in selected_topics[a]]} ]
     index = 0
+    print "render to json..."
     pattern["cluster"] = cluster_center
     for item in author_set:
         if not topic_weight_dist.has_key(item["_id"]):
@@ -426,6 +452,7 @@ def render_topic(request):
     dump.write("var json = ")
     dump.write(json.dumps(pattern))
     dump.close()
+    print "done"
     return HttpResponse(json.dumps(pattern))
 
 def render_topic_2_19(request):
@@ -762,7 +789,6 @@ def render_topic_2_18(request):
             #                                            'year':y,
             #                                            'weight':w/c})#sum([item['topics']['smooth'][j][xx] for xx in selected_topics[t]])/len(selected_topics[t])})
             #                break
-
         pattern['trajectories'].append(traj)    
     pattern['meta'] = {"num":len(range(start_year,end_year))}
     dump = open("topic.json","w")
@@ -771,17 +797,73 @@ def render_topic_2_18(request):
     dump.close()
     return HttpResponse(json.dumps(pattern))
 
-
 def render_community(request):
     pass
 
 def ringnet(request):
-    print settings.STATICFILES_DIRS
     mysql_client = mysql.Mysql()
     au = get_top_authors(range(200),5)
     jconf = mysql_client.get_authors_name(list(au))#mysql_client.get_conference()
     return render_to_response("ringnet.html", {"jconf":jconf})
 
+def coevolution(request):
+    return render_to_response("coevolution.html")
+
+def cosine_distance(u, v):
+    """
+    Returns the cosine of the angle between vectors v and u. This is equal to
+    u.v / |u||v|.
+    """
+    return numpy.dot(u, v) / (math.sqrt(numpy.dot(u, u)) * math.sqrt(numpy.dot(v, v))) 
+
+def render_coevo(request):
+    mysql_client = mysql.Mysql()
+    start = int(request.GET['start'])
+    end = int(request.GET['end'])
+    aus = request.GET['authors']
+    years = [start,end]
+    authors = []
+    for y in aus.strip('"').split(','):
+        authors.append(int(y.strip()))
+    pattern = {"range":[], "categories":[], "time":(start+end)/2, "focus": []}
+    pattern['range'] = years
+    topic_set, author_set, selected_topics = get_author_info(authors)
+    categories_topic = {"name":"topic", "item":[], "relations":[]}
+    categories_community = {"name":"community", "item":[], "relations":[]}
+    topic_index = {} 
+    index=0
+    for t in topic_set:
+        categories_topic["item"].append({"labels":[topic_map[t]]})
+        topic_index[t]=index
+        index+=1
+    for i in range(len(topic_set)):
+        for j in range(i, len(topic_set)):
+            t1 = topic_set[i]
+            t2 = topic_set[j]
+            wei = cosine_distance(topic_dis[t1], topic_dis[t2])
+            categories_topic["relations"].append({"source":topic_index[t1],
+                                                  "target":topic_index[t2],
+                                                  "wei":[wei for x in range(start,end)]})
+    pattern["categories"].append(categories_topic)                                   
+    names = mysql_client.get_authors_name_dict(authors)
+    author_topic_dist = get_author_weight(authors,topics,years)
+    author_papers, year_max = get_author_papers(authors, years)
+    for a in author_set:
+        focus = {"name":names[a["_id"]],"categories":[],"trace":[]}
+        categories_topic = []
+        trace = []
+        for t in topic_set:
+            for y in range(start, end):
+                categories_topic.append({"size":author_topic[a["id"][y][topic_index[t]]],
+                                         "rank":author_topic[a["id"][y][topic_index[t]]]})
+        for y in range(start,end):
+            trace.append({"weight":len(author_papers[a["_id"]][y])/year_max[y]})
+        focus["categories"].append(categories_topic)
+        focus["trace"] = trace
+    pattern["focus"] = focus
+    return HttpResponse(json.dumps(pattern))
+
+        
 def render_egonet(request):
     start = int(request.GET['start'])
     end = int(request.GET['end'])
@@ -833,7 +915,6 @@ def render_egonet(request):
                             {"labels":[random.sample(authors), random.sample(authors)]},
                             {"labels":[random.sample(authors), random.sample(authors)]}]
     return HttpResponse(json.dumps(pattern))
-
 
 def egonet(request):
     pass

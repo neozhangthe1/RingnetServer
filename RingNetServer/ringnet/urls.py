@@ -7,4 +7,6 @@ urlpatterns = patterns("",
                        url(r'^render/egonet/$',render_egonet),
                        url(r'^topic/$',get_jconf_topic),
                        url(r'^render/word/$',render_topic_word),
+                       url(r'^coevo/$',coevolution),
+                       url(r'^render/coevo/$',render_coevo),
                        )

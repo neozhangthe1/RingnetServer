@@ -158,3 +158,11 @@ class Mysql(object):
         for item in res:
             names.append((item[0],UnicodeDammit(item[1]).markup))
         return names
+
+    def get_authors_name_dict(self,aids):
+        name_dict = {}
+        names = self.get_authors_name(aids)
+        for n in names:
+            name_dict[n[0]] = n[1]
+        return name_dict
+
