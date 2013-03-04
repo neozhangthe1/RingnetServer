@@ -34,6 +34,10 @@
     <Compile Include="RingNetServer\algorithm\topic.py" />
     <Compile Include="RingNetServer\algorithm\__init__.py" />
     <Compile Include="RingNetServer\backup\deprecated.py" />
+    <Compile Include="RingNetServer\coevolution\models.py" />
+    <Compile Include="RingNetServer\coevolution\tests.py" />
+    <Compile Include="RingNetServer\coevolution\views.py" />
+    <Compile Include="RingNetServer\coevolution\__init__.py" />
     <Compile Include="RingNetServer\databases.py" />
     <Compile Include="RingNetServer\database\mongo.py" />
     <Compile Include="RingNetServer\database\mysql.py" />
@@ -63,6 +67,8 @@
   <ItemGroup>
     <Folder Include="RingNetServer\" />
     <Folder Include="RingNetServer\algorithm\" />
+    <Folder Include="RingNetServer\coevolution\" />
+    <Folder Include="RingNetServer\coevolution\Templates\" />
     <Folder Include="RingNetServer\database\" />
     <Folder Include="RingNetServer\backup\" />
     <Folder Include="RingNetServer\preprocess\" />

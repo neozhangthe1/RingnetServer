@@ -6,7 +6,7 @@ var color = d3.scale.category10();
 d3.layout.coevol = function() {
 
   var coevol = {};
-  var _size = [ 1, 1 ], _timespan = [1, 1], _focus = [], _categories =[], _time = 2011; // raw data
+  var _size = [ 1, 1 ], _timespan = [1, 1], _focus = [], _categories =[], _time = 2005; // raw data
   var _dots = []; //svg elements
   var timeidx = {};
   var svg = {};
@@ -136,7 +136,7 @@ d3.layout.coevol = function() {
   			left += section + gap;
 		});
 		
-		var idx = timeidx(_time);
+		var idx = Math.round(timeidx(_time));
 		
 		_focus.forEach(function(f, i) {
 			
@@ -246,7 +246,7 @@ d3.layout.coevol = function() {
 		svg.append("g")
 			.attr("id", "guideline");
 		
-		var idx = timeidx(_time);
+		var idx =Math.round(timeidx(_time));
 		
 		category.selectAll("line.axis").remove();
 		var axis = category.selectAll("line.axis")
@@ -513,7 +513,7 @@ d3.layout.coevol = function() {
 	  	  
 	  var f = item.owner;
 	  
-	  var tidx = timeidx(_time);
+	  var tidx = Math.round(timeidx(_time));
 	  
 	  if(item.idx != tidx) return;
 	  
@@ -550,7 +550,7 @@ d3.layout.coevol = function() {
 	  if(!item) return;
   	  
   	  var f = item.owner;
-  	  var tidx = timeidx(_time);
+  	  var tidx = Math.round(timeidx(_time));
   	  if(tidx != item.idx) {
   	  	return;
   	  }
@@ -566,14 +566,14 @@ d3.layout.coevol = function() {
   	  
   	  if(!item) return;
   	  
-  	  var tidx = timeidx(_time);
+  	  var tidx = Math.round(timeidx(_time));
 	  
 	  if(tidx == item.idx) {
 		  item.pick = !item.pick;
 	  } else {
 	  	  _time = _timespan[0] + item.idx;
 	  	  
-	  	  tidx = timeidx(_time);
+	  	  tidx = Math.round(timeidx(_time));
 	  	  
 	  	  coevol.layout();
 	  	  
@@ -637,12 +637,21 @@ d3.layout.coevol = function() {
 var coevol = d3.layout.coevol().size([width, height]);
 
 //d3.json("resultv7.json", function(json) {
-  coevol
-  	  .timespan(json.range)
-      .focus(json.focus)
-	  .categories(json.categories)
-	  .init()
-	  .index()
-	  .layout()
-	  .render();
+
 //});
+var AjaxRequest = {
+	render: function(start, end) {
+		$.get('/ringnet/render/coevo/' + '?' + "start=" + start + "&end=" + end + '&authors="745329,1351471,265966"', function(data, textStatus, jqXHR) { //window.location.href.slice(window.location.href.indexOf('?') + 1),function(data,textStatus,jqXHR){
+			var json = JSON.parse(data);
+			coevol.timespan(json.range)
+				  .focus(json.focus)
+				  .categories(json.categories)
+				  .init()
+				  .index()
+				  .layout()
+				  .render();
+		})
+	}
+}
+
+AjaxRequest.render(2000,2010);

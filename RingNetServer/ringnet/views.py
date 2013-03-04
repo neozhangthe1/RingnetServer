@@ -5,6 +5,7 @@ import pymongo
 import json
 import random
 import pickle
+import math
 from RingNetServer import settings
 from RingNetServer.database import mysql
 from RingNetServer.database import redispy
@@ -170,6 +171,7 @@ def cluster_author_by_topic_dist(authors,years):
 # get auther topic distribution of each years
 def get_author_weight(authors,topics,years):
     author_topic_dist = defaultdict(lambda: defaultdict(lambda: [0.0 for i in range(len(topics))]))
+    topic_year_max = defaultdict(lambda: 0)
     for a in authors:
         flag = 0
         year2index = {}
@@ -194,6 +196,12 @@ def get_author_weight(authors,topics,years):
         for y in years:
             for i in range(len(topics)):
                 author_topic_dist[a['_id']][y][i] = a['topics']['all'][year2index[y]][topics[i]]
+                if topic_year_max[y]<author_topic_dist[a['_id']][y][i]:
+                    topic_year_max[y] = author_topic_dist[a['_id']][y][i]
+    for y in years:
+        for a in author_topic_dist:
+            for i in range(len(topics)):
+                author_topic_dist[a][y][i]/=topic_year_max[y]
     print len(author_topic_dist)
     return author_topic_dist
 
@@ -282,6 +290,7 @@ def render_topic_word(request):
 def get_author_info(authors):
     author_set = []
     topic_set = []
+    topic_sum = defaultdict(lambda:0)
     for a in authors:
         try:
             cur = at_col.find({"_id":int(a)})
@@ -290,18 +299,16 @@ def get_author_info(authors):
             year2index = {}
             for i in range(len(item['topics']['years'])):
                 year2index[item['topics']['years'][i]] = i
-            for y in years:
-                if y in item['topics']['years']:
-                    i = year2index[y]
-                    topic_set.add(item['topics']['max'][i][0])
-                    for t in range(200):
-                        topic_sum[t]+=item['topics']['all'][i][t]
+            for y in year2index:
+                i = year2index[y]
+                for t in range(200):
+                    topic_sum[t]+=item['topics']['all'][i][t]
         except Exception,e:
             pass
     selected_topics = {}
     topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:6]]
     for i in range(len(topics)):
-        selected_topics[i]=[topics[i]]
+        selected_topics[i]=topics[i]
     return author_set, topic_set, selected_topics
 
 # get author's papers in each year
@@ -311,14 +318,13 @@ def get_author_papers(authors, years):
     for a in authors:
         papers = {}
         year2index = {}
-        for i in range(len(item['papers'])):
-            year2index[item['papers'][i]['year']] = i
-        for y in years:
-            if y in year2index:
-                i = year2index[y]
-                papers[y] = item['papers'][i]['papers']
-                if len(papers[y])>year_max[y]:
-                    year_max[y] = len(papers[y])
+        for i in range(len(a['papers'])):
+            year2index[a['papers'][i]['year']] = i
+        for y in year2index:
+            i = year2index[y]
+            papers[y] = a['papers'][i]['papers']
+            if len(papers[y])>year_max[y]:
+                year_max[y] = len(papers[y])
         author_papers[a['_id']] = papers
     return author_papers, year_max
 
@@ -814,55 +820,61 @@ def cosine_distance(u, v):
     Returns the cosine of the angle between vectors v and u. This is equal to
     u.v / |u||v|.
     """
-    return numpy.dot(u, v) / (math.sqrt(numpy.dot(u, u)) * math.sqrt(numpy.dot(v, v))) 
+    mu = max(u)
+    mv = max(v)
+    u = np.array(u)/float(mu)
+    v = np.array(v)/float(mv)
+    return np.dot(u, v) / (math.sqrt(np.dot(u, u)) * math.sqrt(np.dot(v, v))) 
 
 def render_coevo(request):
     mysql_client = mysql.Mysql()
     start = int(request.GET['start'])
     end = int(request.GET['end'])
     aus = request.GET['authors']
-    years = [start,end]
+    years = range(start,end)
     authors = []
     for y in aus.strip('"').split(','):
         authors.append(int(y.strip()))
-    pattern = {"range":[], "categories":[], "time":(start+end)/2, "focus": []}
-    pattern['range'] = years
-    topic_set, author_set, selected_topics = get_author_info(authors)
-    categories_topic = {"name":"topic", "item":[], "relations":[]}
-    categories_community = {"name":"community", "item":[], "relations":[]}
+    pattern = {"range":[start, end], "categories":[], "time":(start+end)/2, "focus": []}
+    author_set, topic_set, selected_topics = get_author_info(authors)
+    categories_topic = {"name":"topic", "items":[], "relations":[]}
+    categories_community = {"name":"community", "items":[], "relations":[]}
     topic_index = {} 
-    index=0
-    for t in topic_set:
-        categories_topic["item"].append({"labels":[topic_map[t]]})
-        topic_index[t]=index
-        index+=1
-    for i in range(len(topic_set)):
-        for j in range(i, len(topic_set)):
-            t1 = topic_set[i]
-            t2 = topic_set[j]
-            wei = cosine_distance(topic_dis[t1], topic_dis[t2])
+    for t in selected_topics:
+        categories_topic["items"].append({"labels":[topic_map[selected_topics[t]]]})
+        topic_index[selected_topics[t]]=t
+    for i in range(len(selected_topics)):
+        for j in range(i+1, len(selected_topics)):
+            t1 = selected_topics[i]
+            t2 = selected_topics[j]
+            print t1
+            print t2
+            wei = cosine_distance(topic_dis[t1].values(), topic_dis[t2].values())
             categories_topic["relations"].append({"source":topic_index[t1],
                                                   "target":topic_index[t2],
                                                   "wei":[wei for x in range(start,end)]})
     pattern["categories"].append(categories_topic)                                   
     names = mysql_client.get_authors_name_dict(authors)
-    author_topic_dist = get_author_weight(authors,topics,years)
-    author_papers, year_max = get_author_papers(authors, years)
+    author_topic_dist = get_author_weight(author_set,selected_topics,years)
+    author_papers, year_max = get_author_papers(author_set, years)
+    print len(author_set)
     for a in author_set:
+        print a["_id"]
         focus = {"name":names[a["_id"]],"categories":[],"trace":[]}
         categories_topic = []
         trace = []
-        for t in topic_set:
-            for y in range(start, end):
-                categories_topic.append({"size":author_topic[a["id"][y][topic_index[t]]],
-                                         "rank":author_topic[a["id"][y][topic_index[t]]]})
+        for y in range(start, end):
+            cat = []
+            for t in topic_index:
+                cat.append({"size":author_topic_dist[a["_id"]][y][topic_index[t]],
+                                         "rank":author_topic_dist[a["_id"]][y][topic_index[t]]})
+            categories_topic.append(cat)
         for y in range(start,end):
             trace.append({"weight":len(author_papers[a["_id"]][y])/year_max[y]})
         focus["categories"].append(categories_topic)
         focus["trace"] = trace
-    pattern["focus"] = focus
+        pattern["focus"].append(focus)
     return HttpResponse(json.dumps(pattern))
-
         
 def render_egonet(request):
     start = int(request.GET['start'])
@@ -931,4 +943,4 @@ def get_jconf_topic(request):
 
 
 
-    
+  
