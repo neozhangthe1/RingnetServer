@@ -7,9 +7,7 @@ import random
 import pickle
 import math
 from RingNetServer import settings
-from RingNetServer.database import mysql
-from RingNetServer.database import redispy
-from RingNetServer.database import mongo
+from RingNetServer.database import mysql,redispy,whooshidx,mongo
 from RingNetServer import algorithm
 from RingNetServer import preprocess
 import numpy as np
@@ -26,16 +24,16 @@ authors = [745329,265966,575748]
 names= ["Jiawei Han","Philip S. Yu","Yizhou Sun"]
 at_col = pymongo.Connection('10.1.1.110',12345)['ringnet']['author_topic']
 topics_label = []
-topic_f = open(os.path.join(settings.RES[0],"tw.txt").replace('\\','/'))
-topic_map_f = open(os.path.join(settings.RES[0],"match2.txt").replace('\\','/'))
+topic_f = open(os.path.join(settings.RESOURCE_DIR,"tw.txt").replace('\\','/'))
+topic_map_f = open(os.path.join(settings.RESOURCE_DIR,"match2.txt").replace('\\','/'))
 topic_map = [int(line) for line in topic_map_f]
 
-alphabet_f = open(os.path.join(settings.RES[0],"alphabet.txt").replace('\\','/'))
-topic_dis_f = open(os.path.join(settings.RES[0],"topics.txt").replace('\\','/'))
+alphabet_f = open(os.path.join(settings.RESOURCE_DIR,"alphabet.txt").replace('\\','/'))
+topic_dis_f = open(os.path.join(settings.RESOURCE_DIR,"topics.txt").replace('\\','/'))
 alphabet = []
 word_dis = defaultdict(lambda: [0.0 for i in range(200)])
 topic_dis = defaultdict(lambda: {})
-for line in alphabet:
+for line in alphabet_f:
     alphabet.append(line.strip())
 inx = 0
 for line in topic_dis_f:
@@ -54,8 +52,23 @@ for line in topic_f:
     for y in x:
         t.append(y)
     topics_label.append(t)
-topic_adj = pickle.load(open(os.path.join(settings.RES[0],"topic_adj_w.pickle").replace('\\','/')))
-author_topic = pickle.load(open(os.path.join(settings.RES[0],"selected_author_topics.pickle").replace('\\','/')))
+topic_adj = pickle.load(open(os.path.join(settings.RESOURCE_DIR,"topic_adj_w.pickle").replace('\\','/')))
+author_topic = pickle.load(open(os.path.join(settings.RESOURCE_DIR,"selected_author_topics.pickle").replace('\\','/')))
+
+f = open(os.path.join(settings.RESOURCE_DIR,"communities.txt").replace('\\','/'))
+author_comm = {}
+for line in f:
+    if line[0] == "#":
+        continue
+    x=line.split('\t')
+    author_comm[int(x[0])]=int(x[1])
+
+pub_comm = pickle.load(open(os.path.join(settings.RESOURCE_DIR,"pub_comm.pickle").replace('\\','/')))
+x = open(os.path.join(settings.RESOURCE_DIR,"topicNames.json").replace('\\','/'))
+topic_names = []
+for line in x:
+    topic_names.append(line.strip('\n').strip(',').strip('"'))
+comm_label = pickle.load(open(os.path.join(settings.RESOURCE_DIR,"comm_label.pickle").replace('\\','/')))
 
 def get_top_authors(topics, lim):
     import redis 
@@ -171,7 +184,7 @@ def cluster_author_by_topic_dist(authors,years):
 # get auther topic distribution of each years
 def get_author_weight(authors,topics,years):
     author_topic_dist = defaultdict(lambda: defaultdict(lambda: [0.0 for i in range(len(topics))]))
-    topic_year_max = defaultdict(lambda: 0)
+    topic_year_max = defaultdict(lambda: defaultdict(lambda: 0))
     for a in authors:
         flag = 0
         year2index = {}
@@ -196,12 +209,12 @@ def get_author_weight(authors,topics,years):
         for y in years:
             for i in range(len(topics)):
                 author_topic_dist[a['_id']][y][i] = a['topics']['all'][year2index[y]][topics[i]]
-                if topic_year_max[y]<author_topic_dist[a['_id']][y][i]:
-                    topic_year_max[y] = author_topic_dist[a['_id']][y][i]
+                if topic_year_max[a['_id']][y]<author_topic_dist[a['_id']][y][i]:
+                    topic_year_max[a['_id']][y] = author_topic_dist[a['_id']][y][i]
     for y in years:
         for a in author_topic_dist:
             for i in range(len(topics)):
-                author_topic_dist[a][y][i]/=topic_year_max[y]
+                author_topic_dist[a][y][i]/=topic_year_max[a][y]
     print len(author_topic_dist)
     return author_topic_dist
 
@@ -306,7 +319,7 @@ def get_author_info(authors):
         except Exception,e:
             pass
     selected_topics = {}
-    topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:6]]
+    topics = [t[0] for t in sorted(topic_sum.items(), key=lambda x:x[1], reverse=True)[:10]]
     for i in range(len(topics)):
         selected_topics[i]=topics[i]
     return author_set, topic_set, selected_topics
@@ -320,11 +333,14 @@ def get_author_papers(authors, years):
         year2index = {}
         for i in range(len(a['papers'])):
             year2index[a['papers'][i]['year']] = i
-        for y in year2index:
-            i = year2index[y]
-            papers[y] = a['papers'][i]['papers']
-            if len(papers[y])>year_max[y]:
-                year_max[y] = len(papers[y])
+        for y in years:
+            if y in year2index:
+                i = year2index[y]
+                papers[y] = a['papers'][i]['papers']
+                if len(papers[y])>year_max[y]:
+                    year_max[y] = len(papers[y])
+            else:
+                papers[y] = []
         author_papers[a['_id']] = papers
     return author_papers, year_max
 
@@ -461,351 +477,6 @@ def render_topic(request):
     print "done"
     return HttpResponse(json.dumps(pattern))
 
-def render_topic_2_19(request):
-    mysql_client = mysql.Mysql()
-    mongo_client = mongo.Mongo()
-    smooth = "smooth"
-    try:
-        smooth = request.GET['smooth']
-    except:
-        pass
-    start_year = int(request.GET['start'])
-    end_year = int(request.GET['end'])
-    jconf = request.GET['jconf']
-    jconf_topic = mysql_client.get_conference_topic(jconf)
-    topic_dict = defaultdict(int)
-    for j in jconf_topic:
-        x = j[2].split(';')
-        try:
-            for i in range(10):
-                topic_dict[int(x[i])]+=1
-        except Exception,e:
-            pass
-    topic_dict_sorted = sorted(topic_dict.keys(), key = lambda x:topic_dict[x], reverse = True)
-    topics = topic_dict_sorted[:5]
-    aus = request.GET['authors']
-    authors = []
-    if aus[0]!='"':
-        lim = int(aus)
-        #labels = ["Database System","Software Engineering","Real-Time Systems","Machine Learning","Data Mining",
-        #          "User Interface Design","Automata Theory","Face Recognition","Information Retrival","Sensor Networks"]
-        #topics = [127,129,73,197,89,59,67,62,50,36]
-        #topics = [127,89,197,50,62]
-        try:
-            authors = get_top_authors(topics, lim)
-        except Exception,e:
-            print e
-        topic_set = range(200)
-    else:
-        for y in aus.strip('"').split(','):
-            authors.append(int(y.strip()))
-    topic_set = set()
-    author_set = []
-    years = range(start_year,end_year)
-    at_col = pymongo.Connection("10.1.1.110",12345)['ringnet']['author_topic']
-    for a in authors:
-        try:
-            cur = at_col.find({"_id":int(a)})
-            item = cur.next()
-            author_set.append(item)
-            year2index = {}
-            for i in range(len(item['topics']['years'])):
-                year2index[item['topics']['years'][i]] = i
-            for y in years:
-                if y in item['topics']['years']:
-                    i = year2index[y]
-                    topic_set.add(item['topics']['max'][i][0])
-        except Exception,e:
-            print e
-    pattern = {"anchors":{}, "items":[], "links":[], "trajectories":[]}
-    selected_topics = {}
-    i = 0
-    for t in topics:
-        selected_topics[i] = [topic_map[t]]
-        i+=1
-    #selected_topics = {0:[175],1:[103],2:[87],3:[127],4:[190],5:[109]}#cluster_topics_aff(list(topic_set))#
-    #topics = [175,103,87,125,190,107]
-    topic_weight_dist = get_author_weight(author_set,topics,years)
-    clusters,cluster_dict,cluster_center = cluster_author_by_topic_dist(topic_weight_dist,years)
-    
-    topic_cluster_dict = {}
-    for i in range(len(selected_topics)):
-        for j in selected_topics[i]:
-            topic_cluster_dict[j] = i
-    for a in range(len(selected_topics)):
-        pattern['anchors'][a] = [{"year":year,"weight":len(selected_topics[a])*10, "topic":selected_topics[a]} for year in range(start_year,end_year)]#[topics_label[x][:3] for x in selected_topics[a]]} ]
-    index = 0
-    pattern["cluster"] = cluster_center
-    for item in author_set:
-        if not topic_weight_dist.has_key(item["_id"]):
-            continue
-        traj = []
-        year2index = {}
-        max_topics = set()
-        flag = 0
-        for i in range(len(item['topics']['years'])):
-            year2index[item['topics']['years'][i]] = i
-        for y in range(start_year,end_year):
-            if not y in item['topics']['years']:
-                flag = 1
-                break
-            else:
-                max_topics.add(item['topics']['max'][year2index[y]][0])
-        if flag == 1:
-            continue
-        offset = -1
-        link_dict = defaultdict(dict)
-        for y in range(start_year,end_year):
-            offset+=1
-            ts = set()
-            for t in range(len(selected_topics)):
-                for tt in selected_topics[t]:
-                    ts.add(tt)
-            if y in year2index:
-                i = year2index[y]
-                max_t=topic_cluster_dict.keys()[0]
-                for x in topic_cluster_dict:
-                    if item['topics']['all'][i][x]> item['topics']['all'][i][max_t]:
-                        max_t = x
-                pattern['items'].append({'name':item['_id'],
-                                         'year':y,
-                                         'max':int(topic_cluster_dict[max_t]),
-                                         'cluster':int(cluster_dict[item["_id"]][y]),
-                                         'weight':len(item['papers'][i])})    
-                weight_dict = {}
-                m = -1
-                mt = 0
-                weight_dict[topic_cluster_dict[max_t]] = item['topics']['all'][i][max_t]
-                for t in range(len(selected_topics)):
-                    w=0.0
-                    c = 0
-
-                    for tt in set(selected_topics[t]):#&set(item['topics']['relevent'][i]):#&max_topics:#:#max_topics:
-                        w+=item['topics']['all'][i][tt]
-                        c+=1
-                    weight_dict[t] = w#/c
-                weight_dict[topic_cluster_dict[max_t]] = item['topics']['all'][i][max_t]
-                for t in weight_dict:
-                    link = {'name':item['_id'],
-                            'topic':selected_topics[t],
-                            'source':t,
-                            'target':index,
-                            'offset':offset,
-                            'year':y,
-                            'weight':weight_dict[t]}
-                    pattern['links'].append(link)#sum([item['topics']['smooth'][i][xx] for xx in selected_topics[t]])/len(selected_topics[t])})
-                    link_dict[y][t] = (link)
-            traj.append(index)
-            index+=1
-        for y in range(start_year, end_year):
-            for t in link_dict[y]:
-                smooth_w = []
-                smooth_w.append(link_dict[y][t]['weight'])
-                smooth_w.append(link_dict[y][t]['weight'])
-                if y > start_year:
-                     smooth_w.append(link_dict[y-1][t]['weight'])
-                if y < end_year-1:
-                     smooth_w.append(link_dict[y+1][t]['weight'])
-                link_dict[y][t]['weight'] = sum(smooth_w)/len(smooth_w)
-        pattern['trajectories'].append(traj)    
-    pattern['meta'] = {"num":len(range(start_year,end_year))}
-    dump = open("topic.json","w")
-    dump.write("var json = ")
-    dump.write(json.dumps(pattern))
-    dump.close()
-    return HttpResponse(json.dumps(pattern))
-
-def render_topic_2_18(request):
-    mysql_client = mysql.Mysql()
-    mongo_client = mongo.Mongo()
-    smooth = "smooth"
-    try:
-        smooth = request.GET['smooth']
-    except:
-        pass
-    start_year = int(request.GET['start'])
-    end_year = int(request.GET['end'])
-    aus = request.GET['authors']
-    if aus[0]!='"':
-        lim = int(aus)
-        labels = ["Database System","Software Engineering","Real-Time Systems","Machine Learning","Data Mining",
-                  "User Interface Design","Automata Theory","Face Recognition","Information Retrival","Sensor Networks"]
-        topics = [127,129,73,197,89,59,67,62,50,36]
-        topics = [127,89,197,50,62]
-        #topics = [127,197,89]
-        #topics = [89]
-        try:
-            authors = get_top_authors(topics, lim)
-        except Exception,e:
-            print e
-        topic_set = range(200)
-    else:
-        authors = []
-        for y in aus.strip('"').split(','):
-            authors.append(int(y.strip()))
-    #get ego network of authors
-
-    #authors = mysql_client.get_coauthors(authors)
-    ##random sample a part of the authors to display
-    #authors = random.sample(authors,500)
-    ##get_topic_item_link(range(start_year,end_year))
-
-    topic_set = set()
-    author_set = []
-    years = range(start_year,end_year)
-    at_col = pymongo.Connection("10.1.1.110",12345)['ringnet']['author_topic']
-    for a in authors:
-        try:
-            cur = at_col.find({"_id":int(a)})
-            item = cur.next()
-            author_set.append(item)
-            year2index = {}
-            for i in range(len(item['topics']['years'])):
-                year2index[item['topics']['years'][i]] = i
-            for y in years:
-                if y in item['topics']['years']:
-                    i = year2index[y]
-                    #topic_set = set(topic_set)|(set(item['topics']['relevent'][i]))
-                    topic_set.add(item['topics']['max'][i][0])
-        except Exception,e:
-            print e
-
-    pattern = {"anchors":{}, "items":[], "links":[], "trajectories":[]}
-    selected_topics = {0:[175],1:[103],2:[87],3:[127],4:[190],5:[109]}#cluster_topics_aff(list(topic_set))#
-    topics = [175,103,87,125,190,107]
-    topic_weight_dist = get_author_weight(author_set,topics,years)
-    clusters,cluster_dict,cluster_center = cluster_author_by_topic_dist(topic_weight_dist,years)
-    
-    topic_cluster_dict = {}
-    for i in range(len(selected_topics)):
-        for j in selected_topics[i]:
-            topic_cluster_dict[j] = i
-    for a in range(len(selected_topics)):
-        pattern['anchors'][a] = [{"year":year,"weight":len(selected_topics[a])*10, "topic":selected_topics[a]} for year in range(start_year,end_year)]#[topics_label[x][:3] for x in selected_topics[a]]} ]
-    index = 0
-
-    pattern["cluster"] = cluster_center
-    for item in author_set:
-        if not topic_weight_dist.has_key(item["_id"]):
-            continue
-                                      
-        traj = []
-        year2index = {}
-        max_topics = set()
-        flag = 0
-        for i in range(len(item['topics']['years'])):
-            year2index[item['topics']['years'][i]] = i
-        for y in range(start_year,end_year):
-            if not y in item['topics']['years']:
-                flag = 1
-                break
-            else:
-                max_topics.add(item['topics']['max'][year2index[y]][0])
-        if flag == 1:
-            continue
-        offset = -1
-        link_dict = defaultdict(dict)
-        for y in range(start_year,end_year):
-            offset+=1
-            ts = set()
-            for t in range(len(selected_topics)):
-                for tt in selected_topics[t]:
-                    ts.add(tt)
-            if y in year2index:
-                i = year2index[y]
-                max_t=topic_cluster_dict.keys()[0]
-                for x in topic_cluster_dict:
-                    if item['topics']['all'][i][x]> item['topics']['all'][i][max_t]:
-                        max_t = x
-                pattern['items'].append({'name':item['_id'],
-                                         'year':y,
-                                         'max':int(topic_cluster_dict[max_t]),
-                                         'cluster':int(cluster_dict[item["_id"]][y]),
-                                         'weight':len(item['papers'][i])})    
-                weight_dict = {}
-                m = -1
-                mt = 0
-                weight_dict[topic_cluster_dict[max_t]] = item['topics']['all'][i][max_t]
-
-                #else:
-                for t in range(len(selected_topics)):
-                    w=0.0
-                    c = 0
-
-                    for tt in set(selected_topics[t]):#&set(item['topics']['relevent'][i]):#&max_topics:#:#max_topics:
-                    #if selected_topics[t][tt] in item['topics']['relevent'][i]:
-                        #if w<item['topics']['smooth'][i][tt]:
-                        w+=item['topics']['all'][i][tt]
-                        c+=1
-                    weight_dict[t] = w#/c
-                weight_dict[topic_cluster_dict[max_t]] = item['topics']['all'][i][max_t]
-                #s = sum(weight_dict.values())
-                #for t in weight_dict:
-                #    weight_dict[t]/s
-
-                for t in weight_dict:
-                    link = {'name':item['_id'],
-                            'topic':selected_topics[t],
-                            'source':t,
-                            'target':index,
-                            'offset':offset,
-                            'year':y,
-                            'weight':weight_dict[t]}
-                    pattern['links'].append(link)#sum([item['topics']['smooth'][i][xx] for xx in selected_topics[t]])/len(selected_topics[t])})
-                    link_dict[y][t] = (link)
-            traj.append(index)
-            index+=1
-        for y in range(start_year, end_year):
-            for t in link_dict[y]:
-                smooth_w = []
-                smooth_w.append(link_dict[y][t]['weight'])
-                smooth_w.append(link_dict[y][t]['weight'])
-                if y > start_year:
-                     smooth_w.append(link_dict[y-1][t]['weight'])
-                if y < end_year-1:
-                     smooth_w.append(link_dict[y+1][t]['weight'])
-                link_dict[y][t]['weight'] = sum(smooth_w)/len(smooth_w)
-
-
-            #else:
-            #    #when author don't have any publication, assume author's topic distribution stay the same, and generate a virtual node
-            #    pattern['items'].append({'name':item['_id'],#names[authors.index(item['_id'])],
-            #                             'year':y,
-            #                             'max':-1,
-            #                             'weight':-1})   
-            #    if y > item['topics']['years'][0]:
-            #        for j in range(len(item['topics']['years'])):
-            #            if item['topics']['years'][j]>y:
-            #                break
-            #        j-=1
-            #        for t in range(len(selected_topics)):
-            #            w=0.0
-            #            c=0
-            #            for tt in set(selected_topics[t])&set(relevant):
-            #                #if w<item['topics']['smooth'][i][tt]:
-            #                w+=item['topics'][smooth][i][tt]
-            #                c+=1
-            #            #if selected_topics[t] in item['topics']['relevent'][i]:
-            #            if w > 0:
-            #                pattern['links'].append({'name':item['_id'],
-            #                                            'topic':selected_topics[t],
-            #                                            'source':t,
-            #                                            'target':index,
-            #                                            'offset':offset,
-            #                                            'year':y,
-            #                                            'weight':w/c})#sum([item['topics']['smooth'][j][xx] for xx in selected_topics[t]])/len(selected_topics[t])})
-            #                break
-        pattern['trajectories'].append(traj)    
-    pattern['meta'] = {"num":len(range(start_year,end_year))}
-    dump = open("topic.json","w")
-    dump.write("var json = ")
-    dump.write(json.dumps(pattern))
-    dump.close()
-    return HttpResponse(json.dumps(pattern))
-
-def render_community(request):
-    pass
-
 def ringnet(request):
     mysql_client = mysql.Mysql()
     au = get_top_authors(range(200),5)
@@ -824,25 +495,87 @@ def cosine_distance(u, v):
     mv = max(v)
     u = np.array(u)/float(mu)
     v = np.array(v)/float(mv)
-    return np.dot(u, v) / (math.sqrt(np.dot(u, u)) * math.sqrt(np.dot(v, v))) 
+    result = np.dot(u, v) / (math.sqrt(np.dot(u, u)) * math.sqrt(np.dot(v, v))) 
+    if result>0:
+        return result
+    else:
+        return 0
+
+def search(request):
+    q = request.GET["q"]
+    whoosh_client = whooshidx.Whoosh()
+    if request.GET.has_key("content"):
+        get = request.GET
+        whoosh_client.append(get["title"],get["content"],get["path"])
+        q = get["title"]
+    ret = []
+    for x in whoosh_client.search(q):
+        y = {}
+        for k in x:
+            y[k] = x[k]
+        ret.append(y)
+    return HttpResponse(json.dumps(ret))
+
+
+selected_topics = []
+topic_index = {}
+def add_coevo(request):
+    mysql_client = mysql.Mysql()
+    whoosh_client = whooshidx.Whoosh()
+    start = int(request.GET['start'])
+    end = int(request.GET['end'])
+    name = request.GET['name']
+    years = range(start,end)
+    authors = []
+    result = whoosh_client.search(name)
+    authors.append(int(result[0]["path"]))
+    author_set, topic_set, selected_topics = get_author_info(authors)
+    max_wei = 0
+    names = mysql_client.get_authors_name_dict(authors)
+    author_topic_dist = get_author_weight(author_set,selected_topics,years)
+    author_papers, year_max = get_author_papers(author_set, years)
+    for a in author_set:
+        print a["_id"]
+        focus = {"name":names[a["_id"]].replace(".","").split(',')[0].replace(" ","_"),"categories":[],"trace":[]}
+        categories_topic = []
+        trace = []
+        for y in range(start, end):
+            cat = []
+            for t in topic_index:
+                cat.append({"size":author_topic_dist[a["_id"]][y][topic_index[t]],
+                            "rank":author_topic_dist[a["_id"]][y][topic_index[t]]})
+            categories_topic.append(cat)
+        for y in range(start,end):
+            trace.append({"weight":len(author_papers[a["_id"]][y])/float(year_max[y])})
+        focus["categories"].append(categories_topic)
+        focus["categories"].append(categories_topic)
+        focus["trace"] = trace
+    return HttpResponse(json.dumps(focus))
 
 def render_coevo(request):
     mysql_client = mysql.Mysql()
+    whoosh_client = whooshidx.Whoosh()
     start = int(request.GET['start'])
     end = int(request.GET['end'])
     aus = request.GET['authors']
     years = range(start,end)
-    authors = []
+    authors_name = []
     for y in aus.strip('"').split(','):
-        authors.append(int(y.strip()))
-    pattern = {"range":[start, end], "categories":[], "time":(start+end)/2, "focus": []}
+        authors_name.append(y.strip())
+    authors = []
+    for a in authors_name:
+        #result = whoosh_client.search(a)
+        #authors.append(int(result[0]["path"]))
+        authors.append(int(a))
+    
+    pattern = {"range":[start, end-1], "categories":[], "time":(start+end)/2, "focus": []}
     author_set, topic_set, selected_topics = get_author_info(authors)
     categories_topic = {"name":"topic", "items":[], "relations":[]}
-    categories_community = {"name":"community", "items":[], "relations":[]}
     topic_index = {} 
     for t in selected_topics:
-        categories_topic["items"].append({"labels":[topic_map[selected_topics[t]]]})
+        categories_topic["items"].append({"labels":topics_label[t][:10],"ids":selected_topics[t]})
         topic_index[selected_topics[t]]=t
+    max_wei = 0
     for i in range(len(selected_topics)):
         for j in range(i+1, len(selected_topics)):
             t1 = selected_topics[i]
@@ -850,27 +583,125 @@ def render_coevo(request):
             print t1
             print t2
             wei = cosine_distance(topic_dis[t1].values(), topic_dis[t2].values())
+            if max_wei<wei:
+                max_wei=wei
             categories_topic["relations"].append({"source":topic_index[t1],
                                                   "target":topic_index[t2],
                                                   "wei":[wei for x in range(start,end)]})
-    pattern["categories"].append(categories_topic)                                   
+    for r in categories_topic["relations"]:
+        for w in range(len(r["wei"])):
+            r["wei"][w] /= max_wei
+    pattern["categories"].append(categories_topic)  
+
     names = mysql_client.get_authors_name_dict(authors)
     author_topic_dist = get_author_weight(author_set,selected_topics,years)
     author_papers, year_max = get_author_papers(author_set, years)
     print len(author_set)
+    author_year_comm_dist = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+    author_year_comm = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    comm_author_year_dist = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    comm_paper_year = defaultdict(lambda: defaultdict(list))
+    comm_author = defaultdict(int)
+    comm_members = set()
+    year_comm = defaultdict(lambda: defaultdict(list))
+    for au in author_set:
+        a = au["_id"]
+        for y in range(start, end):
+            papers = author_papers[a][y]
+            if len(papers)<1:
+                continue
+            coauthors = mysql_client.get_publication_authors(papers)
+            for p in coauthors:
+                for c in coauthors[p]:
+                    if author_comm.has_key(c):
+                        author_year_comm[a][y][author_comm[c]]+=1
+                        comm_author[author_comm[c]]+=1
+                        comm_paper_year[author_comm[c]][y].append(p)
+                        comm_author_year_dist[author_comm[c]][y][a]+=1
+            try:
+                m = max(author_year_comm[a][y].items(), key=lambda x:x[1])[1]
+            except:
+                m = 1
+            for x in author_year_comm_dist[a][y]:
+                author_year_comm_dist[a][y] = float(x)/m
+    sort_comm = sorted(comm_author.items(), key=lambda x: x[1], reverse=True)
+    selected_comm = []
+    selected_comm_dict = {}
+    categories_community = {"name":"community", "items":[], "relations":[]}
+    ind = 0
+    for c in sort_comm[:10]:
+        t = c[0]
+        categories_community["items"].append({"labels":comm_label[t],"ids":t})
+        selected_comm.append(t)
+        selected_comm_dict[t] = ind
+        ind+=1
+    max_wei = defaultdict(int)
+    for i in range(len(selected_comm)):
+        for j in range(i+1, len(selected_comm)):
+            t1 = selected_comm[i]
+            t2 = selected_comm[j]
+            print t1
+            print t2
+            wei = []
+            index = 0
+            for y in range(start, end):
+                d1=[]
+                d2=[]
+                for au in author_set:
+                    a = au["_id"]
+                    d1.append(comm_author_year_dist[t1][y][a])
+                    d2.append(comm_author_year_dist[t2][y][a])
+                x = cosine_distance(d1, d2)
+                wei.append(x)
+                if max_wei[index]<x:
+                    max_wei[index]=x
+                index+=1
+            categories_community["relations"].append({"source":selected_comm_dict[t1],
+                                                      "target":selected_comm_dict[t2],
+                                                      "wei":wei})
+    for r in categories_community["relations"]:
+        for w in range(len(r["wei"])):
+            if max_wei[w] == 0:
+                continue
+            r["wei"][w] /= max_wei[w]
+    max_wei = 0
+    categories_community["relations"] = []
+    for i in range(len(selected_comm)):
+        for j in range(i+1, len(selected_comm)):
+            t1 = selected_comm[i]
+            t2 = selected_comm[j]
+            print t1
+            print t2
+            wei = len(set(pub_comm[t1])&set(pub_comm[t2]))
+            if max_wei<wei:
+                max_wei=wei
+            categories_community["relations"].append({"source":selected_comm_dict[t1],
+                                                  "target":selected_comm_dict[t2],
+                                                  "wei":[wei for x in range(start,end)]})
+    for r in categories_community["relations"]:
+        for w in range(len(r["wei"])):
+            r["wei"][w] /= float(max_wei)
+    pattern["categories"].append(categories_community)    
     for a in author_set:
         print a["_id"]
-        focus = {"name":names[a["_id"]],"categories":[],"trace":[]}
+        focus = {"name":names[a["_id"]].replace(".","").split(',')[0].replace(" ","_"),"categories":[],"trace":[]}
         categories_topic = []
+        categories_community = []
         trace = []
         for y in range(start, end):
             cat = []
             for t in topic_index:
                 cat.append({"size":author_topic_dist[a["_id"]][y][topic_index[t]],
-                                         "rank":author_topic_dist[a["_id"]][y][topic_index[t]]})
+                            "rank":author_topic_dist[a["_id"]][y][topic_index[t]]})
             categories_topic.append(cat)
+            cat = []
+            for c in selected_comm:
+                cat.append({"size":author_year_comm_dist[a["_id"]][y][c],
+                            "rank":author_year_comm_dist[a["_id"]][y][c]})
+            categories_community.append(cat)
         for y in range(start,end):
-            trace.append({"weight":len(author_papers[a["_id"]][y])/year_max[y]})
+            trace.append({"weight":len(author_papers[a["_id"]][y])/float(year_max[y])})
+        focus["categories"].append(categories_topic)
         focus["categories"].append(categories_topic)
         focus["trace"] = trace
         pattern["focus"].append(focus)
@@ -942,5 +773,12 @@ def get_jconf_topic(request):
     return HttpResponse(json.dumps(topics))
 
 
-
-  
+def autocomplete(request):
+    sqs = SearchQuerySet().autocomplete(request.GET.get('q', ''))[:5]
+    suggestions = [result.title for result in sqs]
+    # Make sure you return a JSON object, not a bare list.
+    # Otherwise, you could be vulnerable to an XSS attack.
+    the_data = json.dumps({
+        'results': suggestions
+    })
+    return HttpResponse(the_data, content_type='application/json')

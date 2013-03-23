@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import patterns, url
+from django.conf.urls.defaults import patterns, url, include
 from views import *
 
 urlpatterns = patterns("",
@@ -9,4 +9,6 @@ urlpatterns = patterns("",
                        url(r'^render/word/$',render_topic_word),
                        url(r'^coevo/$',coevolution),
                        url(r'^render/coevo/$',render_coevo),
+                       url(r'^render/coevo/add/$',add_coevo),
+                       url(r'^search/', search),
                        )

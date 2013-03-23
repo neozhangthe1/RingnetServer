@@ -19,7 +19,8 @@ MONGO_HOST61 = "10.1.1.61"
 
 MANAGERS = ADMINS
 HERE = os.path.abspath(os.path.dirname(__file__))
-RES = os.path.join(HERE,'static/res/').replace('\\','/'),
+RESOURCE_DIR = os.path.join(HERE,'static/res/').replace('\\','/')
+INDEX_DIR = os.path.join(HERE, 'index').replace('\\','/')
 
 DATABASES = {
     'default': {
@@ -133,12 +134,16 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'RingNetServer.ringnet',
+    'haystack',
     # Uncomment the next line to enable the admin:
     # 'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
 )
 
+HAYSTACK_SITECONF = "RingNetServer.database.search_index"
+HAYSTACK_SEARCH_ENGINE = 'whoosh'
+HAYSTACK_WHOOSH_PATH = INDEX_DIR
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
@@ -171,13 +176,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
             },
-       'logfile': {
-             'class': 'logging.handlers.WatchedFileHandler',
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '/file.log',
-            'formatter': 'verbose'
-        },
+
     },
     'loggers': {
         'django.request': {

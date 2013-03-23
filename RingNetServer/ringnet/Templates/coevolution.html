@@ -6,13 +6,23 @@
     <!-- <script type="text/javascript" src="d3.js"></script> -->
     <script src="/static/js/d3.v2.js"></script>
     <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
     <link type="text/css" rel="stylesheet" href="/static/css/coevolution.css"/>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
+  <style>
+  .ui-autocomplete-loading {
+    background: white url('/static/img/loading.gif') right center no-repeat;
+  }
+  </style>
+      <script>
+
+  </script>
   </head>
   <body>
-  	<div id="controls" class="toolbar">
-	  	author : <input type="text"></input>
+  	<div id="controls" class="toolba ui-widget">
+	  	author : <input type="text" id="add"></input>
 	  	<input type="button" value="add" onclick="coevol.add(null)"/>
-	  	<input type="button" value="remove" onclick=""/>
+	  	<input type="button" value="remove" onclick="coevol.remove(null)"/>
   	</div>
   	<br>
     <div id="chart"></div>

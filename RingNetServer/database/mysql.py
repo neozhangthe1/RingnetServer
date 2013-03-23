@@ -6,6 +6,7 @@ Created on Dec 18, 2012
 
 import MySQLdb
 from bs4 import UnicodeDammit
+from collections import defaultdict
 
 SQL_GET_PUBLICATION = "SELECT id,title,jconf,year FROM publication WHERE year>1999"
 SQL_GET_ABSTRACT = "SELECT abstract FROM publication_ext WHERE id = %s"
@@ -17,6 +18,7 @@ SQL_GET_JCONF = "SELECT id,name,score FROM jconf"
 SQL_GET_JCONF_TOPIC = "SELECT * FROM conftopic WHERE conference_id = %s"
 SQL_GET_PUBLICATION_BY_JCONF = "SELECT p.id,p.title,p.jconf,p.year,a.aid FROM publication p,na_author2pub a WHERE jconf = %s AND year>%s AND year<%s AND p.id = a.pid"
 SQL_GET_AUTHORS_NAME = "SELECT id,names FROM na_person WHERE id in %s"
+SQL_GET_PUBLICATION_AUTHORS = "SELECT aid, pid FROM na_author2pub WHERE pid in (%s)"
 DB_HOST = "10.1.1.110"
 DB_USER = "root"
 DB_PORT = 3306
@@ -166,3 +168,17 @@ class Mysql(object):
             name_dict[n[0]] = n[1]
         return name_dict
 
+    def get_publication_authors(self,pids):
+        id = ""
+        id+=str(pids[0])
+        for pid in pids[1:]:
+            id+=","
+            id+=str(pid)
+        self.cur.execute(SQL_GET_PUBLICATION_AUTHORS % id)
+        res = self.cur.fetchall()
+        pub_dict = defaultdict(list)
+        for item in res:
+            pub_dict[item[1]].append(item[0])
+        return pub_dict
+
+  

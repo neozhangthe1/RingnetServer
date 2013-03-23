@@ -42,8 +42,11 @@
     <Compile Include="RingNetServer\database\mongo.py" />
     <Compile Include="RingNetServer\database\mysql.py" />
     <Compile Include="RingNetServer\database\redispy.py" />
+    <Compile Include="RingNetServer\database\search_index.py" />
+    <Compile Include="RingNetServer\database\whooshidx.py" />
     <Compile Include="RingNetServer\database\__init__.py" />
     <Compile Include="RingNetServer\objects.py" />
+    <Compile Include="RingNetServer\preprocess\community.py" />
     <Compile Include="RingNetServer\preprocess\network.py" />
     <Compile Include="RingNetServer\preprocess\__init__.py" />
     <Compile Include="RingNetServer\ringnet\models.py" />
