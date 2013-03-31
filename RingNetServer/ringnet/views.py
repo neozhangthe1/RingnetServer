@@ -6,6 +6,7 @@ import json
 import random
 import pickle
 import math
+import redis 
 from RingNetServer import settings
 from RingNetServer.database import mysql,redispy,whooshidx,mongo
 from RingNetServer import algorithm
@@ -71,12 +72,15 @@ for line in x:
 comm_label = pickle.load(open(os.path.join(settings.RESOURCE_DIR,"comm_label.pickle").replace('\\','/')))
 
 def get_top_authors(topics, lim):
-    import redis 
     redis_client = redis.StrictRedis(host="arnetminer.org",db=0)
     authors = set()
     for t in topics:
         authors = authors.union(set(redis_client.zrevrange("AuthorFeature:hindex:t"+str(t),0,lim)))
     return authors
+
+#def get_author_feature():
+#    redis_client = redis.StrictRedis(host="arnetminer.org", db=0)
+#    redis_client
 
 def gen_pattern():
     pass
@@ -560,8 +564,8 @@ def render_coevo(request):
     aus = request.GET['authors']
     years = range(start,end)
     authors_name = []
-    for y in aus.strip('"').split(','):
-        authors_name.append(y.strip())
+    for y in aus.strip('"').strip("'").split(','):
+        authors_name.append(y.strip("'").strip('"'))
     authors = []
     for a in authors_name:
         #result = whoosh_client.search(a)
@@ -614,6 +618,7 @@ def render_coevo(request):
             for p in coauthors:
                 for c in coauthors[p]:
                     if author_comm.has_key(c):
+                        
                         author_year_comm[a][y][author_comm[c]]+=1
                         comm_author[author_comm[c]]+=1
                         comm_paper_year[author_comm[c]][y].append(p)
@@ -622,8 +627,8 @@ def render_coevo(request):
                 m = max(author_year_comm[a][y].items(), key=lambda x:x[1])[1]
             except:
                 m = 1
-            for x in author_year_comm_dist[a][y]:
-                author_year_comm_dist[a][y] = float(x)/m
+            for x in author_year_comm[a][y]:
+                author_year_comm_dist[a][y][x] = float(author_year_comm[a][y][x])/m
     sort_comm = sorted(comm_author.items(), key=lambda x: x[1], reverse=True)
     selected_comm = []
     selected_comm_dict = {}
@@ -635,6 +640,7 @@ def render_coevo(request):
         selected_comm.append(t)
         selected_comm_dict[t] = ind
         ind+=1
+
     max_wei = defaultdict(int)
     for i in range(len(selected_comm)):
         for j in range(i+1, len(selected_comm)):
@@ -680,7 +686,19 @@ def render_coevo(request):
                                                   "wei":[wei for x in range(start,end)]})
     for r in categories_community["relations"]:
         for w in range(len(r["wei"])):
-            r["wei"][w] /= float(max_wei)
+            if max_wei == 0:
+                r["wei"][w] = 0
+            else:
+                r["wei"][w] /= float(max_wei)
+    dup = 0
+    for i in range(len(selected_comm), 10):
+        dup+=1
+        sel_com = comm_label.keys()[i]
+        categories_community["items"].append({"labels":comm_label[sel_com],"ids":sel_com})
+        for j in range(i):
+            categories_community["relations"].append({"source":j,
+                                                      "target":i,
+                                                      "wei":0.0})
     pattern["categories"].append(categories_community)    
     for a in author_set:
         print a["_id"]
@@ -698,11 +716,17 @@ def render_coevo(request):
             for c in selected_comm:
                 cat.append({"size":author_year_comm_dist[a["_id"]][y][c],
                             "rank":author_year_comm_dist[a["_id"]][y][c]})
+            for c in range(dup):
+                cat.append({"size":0,
+                            "rank":0})
             categories_community.append(cat)
         for y in range(start,end):
-            trace.append({"weight":len(author_papers[a["_id"]][y])/float(year_max[y])})
+            if year_max[y]>0:
+                trace.append({"weight":len(author_papers[a["_id"]][y])/float(year_max[y])})
+            else:
+                trace.append({"weight":0})
         focus["categories"].append(categories_topic)
-        focus["categories"].append(categories_topic)
+        focus["categories"].append(categories_community)
         focus["trace"] = trace
         pattern["focus"].append(focus)
     return HttpResponse(json.dumps(pattern))

@@ -1,4 +1,4 @@
-var width = 1024,
+var width = 960,
 	height = 600;
 var margin = {
 	"left": 10,
@@ -15,12 +15,12 @@ var bar = {
 	"hgap": 1
 };
 var color = d3.scale.category10();
-
+var _data = []
 d3.layout.coevol = function() {
 
 	var coevol = {};
 	var _size = [1, 1],
-		_timespan = [1, 1],
+		_timespan = [2000, 2009],
 		_focus = [],
 		_categories = [],
 		_time = 2005,
@@ -282,18 +282,19 @@ d3.layout.coevol = function() {
 			.attr("y2", function(d) {
 			return d.length;
 		})
-			.on("mouseover", function(d) {
-			div.transition().duration(200).style("opacity", .9);
-			label = "";
-			d.labels.forEach(function(l) {
-				label += l;
-				label += "<br/>";
-			})
-			div.html(label).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
-		})
-			.on("mouseout", function(d) {
-			div.transition().duration(500).style("opacity", 0);
-		});
+			.on("mouseover", mouseover_event)
+		// 	.on("mouseover", function(d) {
+		// 	div.transition().duration(10).style("opacity", .9);
+		// 	label = "";
+		// 	d.labels.forEach(function(l) {
+		// 		label += l;
+		// 		label += "<br/>";
+		// 	})
+		// 	div.html(label).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
+		// })
+		// 	.on("mouseout", function(d) {
+		// 	div.transition().duration(500).style("opacity", 0);
+		// });
 
 		category.selectAll("path.link").remove();
 		var rels = category.selectAll("path.link")
@@ -306,6 +307,8 @@ d3.layout.coevol = function() {
 		})
 			.attr("class", "link")
 			.style("stroke-width", function(d) {
+			if(d.wei == 0)
+				return 0 +"px";
 			return (5 * d.wei[idx]) + "px";
 		})
 			.style("opacity", function(d) {
@@ -389,6 +392,41 @@ d3.layout.coevol = function() {
 			});
 
 			for (var j = 0; j < f.categories.length; ++j) {
+				_data = [];
+				for (var k = 0; k < f.categories[j][idx].length; ++k) {
+					if (k > 0) {
+						_d = {}
+						_d.pre = f.categories[j][idx][k - 1];
+						_d.cur = f.categories[j][idx][k];
+						_data.push(_d)
+					}
+
+				}
+				d3.select("#c-" + j).selectAll("#l-" + i + "-" + j).remove();
+
+				d3.select("#c-" + j)
+					.selectAll("#l-" + i + "-" + j)
+					.data(_data)
+					.enter().append("line")
+					.attr("class", "person")
+					.attr("x1", function(d) {
+					return d.pre.cx;
+				})
+					.attr("x2", function(d) {
+					return d.cur.cx;
+				})
+					.attr("y1", function(d) {
+					return d.pre.cy;
+				})
+					.attr("y2", function(d) {
+					return d.cur.cy;
+				})
+					.attr("stroke-width", "1px")
+					.attr("stroke", function(d) {
+					return color(f.name);
+				}).attr("id", function(d) {
+					return "l-" + i + "-" + j;
+				})
 
 				d3.select("#c-" + j).selectAll("#d-" + i + "-" + j).remove();
 
@@ -409,7 +447,7 @@ d3.layout.coevol = function() {
 					.attr("width", function(d) {
 					return d.r;
 				})
-					.attr("height", bar.height)
+					.attr("height", bar.height/2)
 					.style("fill", function(d) {
 					return color(f.name);
 				})
@@ -469,7 +507,7 @@ d3.layout.coevol = function() {
 		_t = coevol.timespan();
 		_a = coevol.authors();
 		_q = "";
-		if(_a.indexOf(x)>=0){
+		if (_a.indexOf(x) >= 0) {
 			return;
 		}
 		for (var i = 0; i < _a.length; i++) {
@@ -477,9 +515,10 @@ d3.layout.coevol = function() {
 			_q += ",";
 		}
 		_q += x;
+		_t[0] = $("#start").val();
+		_t[1] = $("#end").val();
 
-
-		$.get('/ringnet/render/coevo/?' + "start=" + _t[0] + "&end=" + _t[1] + '&authors="' + _q + '"', function(data, textStatus, jqXHR) {
+		$.get('/ringnet/render/coevo/?' + "start=" + _t[0] + "&end=" + _t[1] + '&authors=' + _q, function(data, textStatus, jqXHR) {
 			var json = JSON.parse(data);
 			$("#chart").empty()
 			_a.push(x)
@@ -502,7 +541,7 @@ d3.layout.coevol = function() {
 		_a = coevol.authors();
 		_q = "";
 		index = _a.indexOf(x);
-		if(index<0){
+		if (index < 0) {
 			return;
 		}
 		_a.splice(index, 1);
@@ -511,7 +550,8 @@ d3.layout.coevol = function() {
 			_q += ",";
 			_q += _a[i];
 		}
-
+		_t[0] = $("#start").val();
+		_t[1] = $("#end").val();
 
 		$.get('/ringnet/render/coevo/?' + "start=" + _t[0] + "&end=" + _t[1] + '&authors="' + _q + '"', function(data, textStatus, jqXHR) {
 			var json = JSON.parse(data);
@@ -561,18 +601,55 @@ d3.layout.coevol = function() {
 			.attr("d", function(d) {
 			return curve(d);
 		});
+
+		// d3.select("#c-" + j)
+		// 	.selectAll("#l-" + i + "-" + j)
+		// 	.data(_data)
+		// 	.enter().append("line")
+		// 	.attr("class", "person")
+		// 	.attr("x1", function(d) {
+		// 	return d.pre.cx ;
+		// })
+		// 	.attr("x2", function(d) {
+		// 	return d.cur.cx ;
+		// })
+		// 	.attr("y1", function(d) {
+		// 	return d.pre.cy ;
+		// })
+		// 	.attr("y2", function(d) {
+		// 	return d.cur.cy;
+		// })
+		// 	.attr("stroke-width", "1px")
+		// 	.attr("stroke", function(d) {
+		// 	return color(f.name);
+		// })
+		category.selectAll("line.person")
+			.transition()
+			.attr("x1", function(d) {
+			return d.pre.cx;
+		})
+			.attr("x2", function(d) {
+			return d.cur.cx;
+		})
+			.attr("y1", function(d) {
+			return d.pre.cy;
+		})
+			.attr("y2", function(d) {
+			return d.cur.cy;
+		});
+
 		category.selectAll("rect.dot")
 			.transition()
 			.attr("x", function(d) {
-			return bcollapse ? d.cx : d.cx - d.r / 2.0
+			return d.cx - d.r / 2.0//bcollapse ? d.cx : d.cx - d.r / 2.0
 		})
 			.attr("y", function(d) {
-			return bcollapse ? d.cy : d.cy - bar.height / 2.0;
+			return d.cy - bar.height / 2.0;//bcollapse ? d.cy : d.cy - bar.height / 2.0;
 		})
 			.attr("width", function(d) {
 			return bcollapse ? 0 : d.r;
 		})
-			.attr("height", bcollapse ? 0 : bar.height);
+			.attr("height", bar.height/2);//bcollapse ? 0 : bar.height);
 
 
 		for (var i = 0; i < _focus.length; ++i) {
@@ -675,11 +752,38 @@ d3.layout.coevol = function() {
 				})
 					.selectAll("text")
 					.text(function(d, j) {
-					return (d.idx == tidx && i == _focus.length - 1) ? _time : "";
+					return (d.idx == tidx ) ? _time : "";
 				});
 
 				var c = d3.selectAll("g.category");
 				for (var j = 0; j < _categories.length; ++j) {
+					_data = []
+					for (var k = 0; k < _focus[i].categories[j][tidx].length; ++k) {
+						if (k > 0) {
+							_d = {}
+							_d.pre = _focus[i].categories[j][tidx][k - 1];
+							_d.cur = _focus[i].categories[j][tidx][k];
+							_data.push(_d)
+						}
+
+					}
+
+					c.selectAll("#l-" + _focus[i].id + "-" + j)
+						.data(_data)
+						.transition()
+						.attr("x1", function(d) {
+						return d.pre.cx;
+					})
+						.attr("x2", function(d) {
+						return d.cur.cx;
+					})
+						.attr("y1", function(d) {
+						return d.pre.cy;
+					})
+						.attr("y2", function(d) {
+						return d.cur.cy;
+					})
+
 					c.selectAll("#d-" + _focus[i].id + "-" + j)
 						.data(_focus[i].categories[j][tidx]);
 
@@ -696,12 +800,15 @@ d3.layout.coevol = function() {
 					});
 				}
 
+
 				c.selectAll("path.link")
 					.transition()
 					.attr("d", function(l) {
 					return curve(l)
 				})
 					.style("stroke-width", function(d) {
+					if(d.wei[tidx] == 0)
+						return 0 + "px";
 					return (5 * d.wei[tidx]) + "px";
 				})
 					.style("opacity", function(d) {
@@ -710,6 +817,59 @@ d3.layout.coevol = function() {
 			}
 		}
 	}
+
+	var mouseover_event = function(d) {
+		var tagcloud = {};
+		var words = [];
+		if (d.labels.length > 0){
+			var wfreq = [];
+			for (var i=0; i<d.labels.length; i++){
+			  	var obj = {};
+			  	obj.text = d.labels[i];
+			  	obj.size = 10 - i;
+			  	obj.color = color(i);
+			  	words.push(obj);
+			  	
+			  	var wf = {tag: d.labels[i].tag, freq: d.labels[i].n};
+			  	wfreq.push(wf);
+			}
+			
+			var sortfreq = wfreq.sort(function(a, b){return b.freq - a.freq;});
+			var string = sortfreq[0].tag;
+			var size = sortfreq.length < 10 ? sortfreq.length : 10;
+			for (var i=1; i<size; i++){
+				string += (","+sortfreq[i].tag);
+			}
+			
+			//req_tweets('content', string);
+		}
+		
+		tagcloud.words = words;
+
+		generate_tagcloud(tagcloud, d.x+d.width/2, d.y_c-d.height_c/2, d.time);
+		d3.select("#tagcloud").style("opacity", 1).style("visibility", "visible");
+		// if (flag_cloud == 0){
+		// 	if (flag_view == 0){
+		// 		if (d.x < width/2){
+					
+		// 		}else{
+		// 			generate_tagcloud(tagcloud, d.x-tagwidth-d.width/2, d.y_c-d.height_c/2, d.time);
+		// 		}
+		// 	}else {
+		// 		if (d.x < width/2){
+		// 			generate_tagcloud(tagcloud, d.x+d.width/2, d.y_s-d.height_s/2, d.time);
+		// 		}else{
+		// 			generate_tagcloud(tagcloud, d.x-tagwidth-d.width/2, d.y_s-d.height_s/2, d.time);
+		// 		}
+		// 	}
+			
+			
+			
+			
+		// 	flag_cloud2 = 1;
+		// }
+	}
+
 
 	_mouseover = function(f) {
 		coevol.highlight(f, true);
@@ -752,7 +912,7 @@ function render(x) {
 	_t = coevol.timespan();
 	_a = coevol.authors();
 	_q = "";
-	if(_a.indexOf(x)>=0){
+	if (_a.indexOf(x) >= 0) {
 		return;
 	}
 	for (var i = 0; i < _a.length; i++) {
@@ -761,7 +921,10 @@ function render(x) {
 	}
 	_q += x;
 
-	$.get('/ringnet/render/coevo/?' + "start=" + _t[0] + "&end=" + _t[1] + '&authors="' + _q + '"', function(data, textStatus, jqXHR) {
+	_t[0] = $("#start").val();
+	_t[1] = $("#end").val();
+
+	$.get('/ringnet/render/coevo/?' + "start=" + _t[0] + "&end=" + _t[1] + '&authors=' + _q , function(data, textStatus, jqXHR) {
 		var json = JSON.parse(data);
 		$("#chart").empty()
 		_a.push(x)
@@ -773,7 +936,7 @@ function render(x) {
 			.layout()
 			.render();
 	}).error(function() {
-		alert("author not found!")
+		alert("author not found!") 
 	})
 
 }
@@ -812,6 +975,9 @@ $(function() {
 var AjaxRequest = {
 	render: function(start, end) {
 		var authors = queryString()["authors"];
+		if(authors==undefined){
+			return;
+		}
 		var x = [];
 		var a = authors.replace("'", "").replace('"', "")
 		authors = a.split(',');
@@ -831,5 +997,6 @@ var AjaxRequest = {
 		})
 	}
 }
-
+$("#start").val(2000);
+$("#end").val(2010);
 AjaxRequest.render(2000, 2010);

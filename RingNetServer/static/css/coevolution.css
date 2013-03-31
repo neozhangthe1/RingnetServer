@@ -5,9 +5,9 @@
 }
 .axis{
   fill: none;
-  stroke: #999;
+  stroke: transparent;
   shape-rendering: crispEdges;
-  stroke-width: 1px;
+  stroke-width: 3px;
 }
 .axis1{
   fill: none;
@@ -45,7 +45,7 @@
 }
 .category {
 	fill: transparent;
-	stroke: lightgrey;
+	stroke: transparent;
 	stroke-width: .5px;
 }
 .toolbar {

@@ -1,31 +1,154 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Co-Evolution</title>
-    <!-- <script type="text/javascript" src="d3.js"></script> -->
-    <script src="/static/js/d3.v2.js"></script>
-    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
-    <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
-    <link type="text/css" rel="stylesheet" href="/static/css/coevolution.css"/>
-    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
-  <style>
+<head>
+  <meta charset="utf-8" />
+  <title>Co-Evolution</title>
+  <!-- <script type="text/javascript" src="d3.js"></script>
+-->
+<script src="/static/js/d3.v2.js"></script>
+<script src="/static/js/tagcloud.js"></script>
+<script src="/static/js/d3.layout.cloud.js"></script>
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+<link type="text/css" rel="stylesheet" href="/static/css/coevolution.css"/>
+<script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+<link type="text/css" rel="stylesheet" href="/static/css/framework.css"/>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
+<style>
   .ui-autocomplete-loading {
     background: white url('/static/img/loading.gif') right center no-repeat;
   }
   </style>
-      <script>
+<script></script>
+</head>
+<body>
+<div id="top">
+  <div class="inner">
+    <div id="topleft">
+      <h1>Social Arms</h1>
+    </div>
+    <br class="clear" />
+    <!--
+<div id="mainmenu">
+    <ul>
+      <li>
+        <a id="view1">Overview</a>
+      </li>
+      <li>
+        <a id="view2">Details</a>
+      </li>
+    </ul>
+  </div>
+  -->
+  <br class="clear" />
+</div>
+</div>
 
-  </script>
-  </head>
-  <body>
-  	<div id="controls" class="toolba ui-widget">
-	  	author : <input type="text" id="add"></input>
-	  	<input type="button" value="add" onclick="coevol.add(null)"/>
-	  	<input type="button" value="remove" onclick="coevol.remove(null)"/>
-  	</div>
-  	<br>
-    <div id="chart"></div>
-    <script type="text/javascript" src="/static/js/coevolution.js"></script>
-  </body>
+<div id="wrap">
+<div class="inner">
+  <div class="menubar">
+    <div id="controls" class="toolba ui-widget">
+      author :
+      <input type="text" id="add"></input>
+    <input type="button" value="add" onclick="coevol.add(null)"/>
+    <input type="button" value="remove" onclick="coevol.remove(null)"/>
+    start year :
+    <input type="text" id="start"></input>
+  end year :
+  <input type="text" id="end"></input>
+</div>
+
+<!--   data:&nbsp;
+    <select id="datalist" onchange="req_data()" >
+<option value=""></option>
+</select>
+&nbsp;&nbsp;
+          sentiments:&nbsp;
+<select id="sentiments" onchange="req_data()" >
+<option value="np">positive-negitive</option>
+<option value="af">fear-anger</option>
+<option value="sj">joy-sadness</option>
+</select>
+&nbsp;&nbsp;
+          filter:&nbsp;
+<select id="filter" >
+<option value="competing">competing curves</option>
+<option value="occurence">co-occurrence curves</option>
+<option value="waved">waved curves</option>
+</select>
+&nbsp;&nbsp;
+          scale:&nbsp;
+<select id="setScale" >
+<option value="linear">linear</option>
+<option value="power">power</option>
+</select>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<input id="curveview" type="radio" name="view" value="curveview" checked>
+<label for="curveview">overview</label>
+<input id="straight" type="radio" name="view" value="straight">
+<label for="straight">event view</label>
+-->
+</div>
+<div id = "content">
+<div id = "sidebar" class="left">
+<div id="overview">
+<div id="tagcloud"></div>
+</div>
+<div id="tweetlist">
+<div id="tweet">
+  <div class="contents">
+    <p>
+      <a href="http://twitter.com/DoodlebugFtDOR">
+        <img class="profile_icon" src="http://a0.twimg.com/profile_images/1572071826/futuristic_SCIFI_E_small_normal.jpg" width="36" height="36" alt="Twitter"></a>
+    </p>
+    <p>
+      <a href="http://twitter.com/DoodlebugFtDOR">DoodlebugFtDOR</a>
+      <br>
+      <span>
+        "Romney doesn't have a 5-point plan, but a 1-point plan" Obama #2012Debates
+      </span>
+    </p>
+  </div>
+  <div class="intents" id="web_intent">
+    <span class="time">21:15</span>
+    <img src="images/retweet_mini.png" width="10" height="10" alt="Retweet">
+    <a href="http://twitter.com/intent/retweet?tweet_id=258375557752946688">Retweet</a>
+    <img src="images/reply_mini.png" width="10" height="10" alt="Reply">
+    <a href="http://twitter.com/intent/tweet?in_reply_to=258375557752946688">Reply</a>
+    <img src="images/favorite_mini.png" width="10" height="10" alt="Favorite">
+    <a href="http://twitter.com/intent/favorite?tweet_id=258375557752946688">Favorite</a>
+  </div>
+  <hr class="hline">
+  <div class="contents">
+    <p>
+      <a href="http://twitter.com/Donna_West">
+        <img class="profile_icon" src="http://a0.twimg.com/profile_images/2726093579/3986a14cc324853e2faa77d12e71b3c8_normal.png" width="36" height="36" alt="Twitter"></a>
+    </p>
+    <p>
+      <a href="http://twitter.com/Donna_West">Donna_West</a>
+      <br>
+      <span>
+        Geesh, Obama had 5 points so Mitt has to say '5 point plan'. #debates
+      </span>
+    </p>
+  </div>
+  <div class="intents" id="web_intent">
+    <span class="time">21:09</span>
+    <img src="images/retweet_mini.png" width="10" height="10" alt="Retweet">
+    <a href="http://twitter.com/intent/retweet?tweet_id=258374163251752960">Retweet</a>
+    <img src="images/reply_mini.png" width="10" height="10" alt="Reply">
+    <a href="http://twitter.com/intent/tweet?in_reply_to=258374163251752960">Reply</a>
+    <img src="images/favorite_mini.png" width="10" height="10" alt="Favorite">
+    <a href="http://twitter.com/intent/favorite?tweet_id=258374163251752960">Favorite</a>
+  </div>
+  <hr class="hline"></div>
+</div>
+<div id="chart"></div>
+</div>
+</div>
+</div>
+
+<script type="text/javascript" src="/static/js/coevolution.js"></script>
+</div>
+<br></body>
 </html>

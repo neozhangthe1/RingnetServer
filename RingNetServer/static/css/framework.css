@@ -1,0 +1,293 @@
+line.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+.crossline {
+  stroke: #59BDFF;
+  stroke-width: 0.5px;
+}
+
+.activity {
+  stroke: #999;
+  stroke-opacity: .6;
+  stroke-width: 2px;
+}
+.event{
+  fill: none;
+  stroke: #999;
+  stroke-opacity: .6;
+  stroke-width: 0.5px;
+}
+
+.hashtag{
+  stroke-opacity: 1;
+  stroke-width: 1px;
+}
+
+.group{
+  fill: white;
+  stroke: #999;
+  stroke-opacity: .6;
+  stroke-width: 0.5px;
+}
+
+.user {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.chain {
+  stroke: #999;
+  fill: none;
+  stroke-width: 1px;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-family: sans-serif;
+    font-size: 15px;
+}
+
+.plotframe {
+  stroke: gray;
+  fill: none;
+}
+
+.area {
+  stroke-width: 05px;
+}
+
+/*.tooltip {
+  position: absolute;
+  text-align: center;
+  width: 80px;
+  height: 50px;
+  padding: 8px;
+  font: 10px sans-serif;
+  background: white;
+  border: solid 1px #aaa;
+  border-radius: 8px;
+  pointer-events: none;
+}*/
+
+.tooltiphash {
+  position: absolute;
+  text-align: center;
+  width: 70px;
+  height: 22.5px;
+  padding: 8px;
+  font: 15px sans-serif;
+  background: white;
+  border: solid 1px #aaa;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+#tagcloud {
+  position: absolute;
+  
+  width: 300px;
+  height: 120px;  
+  visibility: visible; 
+ 
+  border-radius: 8px;
+  text-align: center;
+}
+
+#overview {
+  float: left;
+  background-color: #fff;
+  width: 310px;
+  height: 120px;
+  border: 1px solid #d8d8d8; 
+  position: relative; 
+}
+
+#tweetlist { 
+  float: left;
+  background-color: #fff;
+  width: 100%;
+  height: 300px;
+  border: 1px solid #d8d8d8; 
+  padding: 5px 5px 15px 5px;
+  position: relative;
+  overflow: scroll;
+}
+
+#chart{
+  position: absolute;
+  width: 1024px;
+  height: 600px;
+  margin: 0px 0px 0px 320px;
+}
+
+#legend{
+  position: absolute;
+  width: 52px;
+  height: 600px;
+  margin: 25px 0px 0px 1324px;
+}
+
+.menubar {
+  background-color: #f2f2f2;
+  color: #666;
+  width: 1324px; 
+  height: 30px;
+  text-align: left; 
+  font:100% Verdana,sans-serif;
+  font-size: 15px;
+  margin-left: 0px;
+  padding-top: 15px;
+  padding-bottom:15px;
+  padding-left: 10px;
+  border-radius: 8px;
+  text-shadow: 0 1px 0 #fff;
+  border: 1px solid #d8d8d8;
+  font-weight: bold;
+}
+
+.menubar select {
+   width: 150px;
+   padding: 5px;
+   font-size: 16px;
+   line-height: 1;
+}
+
+.tweettitle {
+  float: left;
+  height: 20px;
+  margin: 0px 0px 0px 0px;
+  padding: 5px 5px 20px 5px;
+  position: absolute;
+/*   border: 1px solid #d8d8d8;  */
+ }
+
+.tweettitle h3{
+  color: #666;
+  background-color: #f2f2f2;
+  font-size: 12px;
+  font-weight: bold;
+  width: 100%;
+  padding: 10px 10px 10px 10px;
+  text-shadow: 0 1px 0 #fff;
+  border: 1px solid #d8d8d8; 
+  border-radius: 8px;
+}
+
+#bird_img{ 
+  float: left;
+}
+
+
+#tweet  {
+  clear: both;
+  font-size: 0.8em;
+  text-align: left;
+}
+
+#tweet p {
+  margin: 15px 15px 0px 15px;
+  
+}
+
+#tweet .profile_icon {
+  float: left;
+  margin: 0px 10px 10px 0px;
+}
+
+#tweet hr {
+    width: 90%;
+    height: 1px;
+    background: #dfdfdf;
+    display: block;
+    border: none;
+    margin: 20px 0px 20px 18px;
+}
+
+#web_intent { 
+  float: none;
+  clear: both;
+  margin: 10px 0px 0px 15px;
+  font-size: 0.8em;
+}
+
+#web_intent a:link, #web_intent a:visited, #web_intent a:active {
+  margin: 0px 10px 0px 0px;
+}
+
+#web_intent img {
+  margin: 0px 3px 0px 0px;
+  position: relative;
+  top: 2px;
+}
+
+#web_intent .time {
+  margin: 0px 10px 0px 0px;
+}
+
+/* Body */
+* {margin:0; padding:0;}
+body {background-color:white; color:#333; font:76% Verdana,sans-serif; line-height:1.3em; text-align:center;}
+.inner {width:1324px; margin:0 auto;}
+
+/* Top */
+#top {padding:10px 0 0 0; background:#eaeaea url(../images/topbg.gif) bottom left repeat-x; color:#555; margin:0 auto;}
+#topleft {width:50%; float:left; margin:0; text-align:left;}
+#topleft h1 {font-size:2.2em; line-height:0.9em; margin:5px 0 10px; padding:0;}
+#topleft h1 a {font-weight:normal; color:#f29450; letter-spacing:-1px;}
+#topleft p, #topright p {margin:0 0 20px 0; font-size:1.3em; padding:0;}
+#topright {width:45%; float:right; text-align:right; margin:5px 0 0 0;}
+#topright a {color:#777; font-weight:400;}
+#topleft a:hover, #topright a:hover {color:#2a5a9a;}
+
+/* Searchbox */
+.searchbox {margin:15px 0 0 0; padding:0;}
+.searchbox label {color:#777; font-size:1.3em;}
+.searchbox input {background:#eaeaea; padding:3px 0 3px 5px; margin:0; width:120px; color:#666; border:1px solid #aaa;}
+
+/* Main wrap */
+#wrap {clear:both; text-align:center; background:#fff; padding:0 0 0 0; margin:0;}
+
+/* Main menu */
+#mainmenu {clear:both; margin:0; padding:0; text-align:left;}
+#mainmenu ul {padding:0;}
+#mainmenu ul li {list-style:none; float:left; margin:0 4px 0 0;}
+#mainmenu ul li a {display:block; font-weight:700; background-color:#f0f0f0; border:1px solid #ccc; border-bottom:1px solid #ccc; padding:5px 6px 4px 6px;}
+#mainmenu ul li a:hover {background-color:#f8f8f8; color:#777; padding:5px 6px 4px 6px; border:1px solid #ccc; border-bottom:1px solid #dadada;}
+#mainmenu ul li.current_page_item a {background-color:#fff; color:#555; padding:5px 6px 3px 6px; border:1px solid #eee; border-bottom:2px solid #fff;}
+
+/* Headers */
+h2, h3, h4 {margin:0 0 15px; color:#666; font-weight:normal;}
+
+/* Sidebar */
+#sidebar {text-align:left; float:left; margin:0; width:300px; padding:0;}
+#sidebar caption {font-size:1.3em; padding:0; margin:0 0 4px 0; text-align:left;}
+
+/* Content */
+#content {float:left;  text-align:left; margin-left:0; margin-top:0}
+
+/* Footer */
+#footer {clear:both; color:#777; text-align:center; background:#eaeaea url(../images/footbg.gif) top left repeat-x;}
+#footer p {margin:0; padding:15px 0; line-height:1.9em; font-size:0.9em;}
+#footer .credits {font-size:1.3em;}
+#footer a {color:#666;}
+#footer a:hover {color:#333; text-decoration:underline;}
+
+/* Links */
+a {color:#467aa7; font-weight:400; text-decoration:none;}
+a:hover {color:#303030; text-decoration:none;}
+a img {border:0;}
+
+/* Various classes */
+.feedlink {padding:0 0 0 18px; margin:0 0 0 10px; font-size: 1em; background: url(../images/rss.png) center left no-repeat;}
+.textright {text-align:right;}
+.textcenter {text-align:center;}
+.clear {visibility:hidden; clear:both;}
+.hide {display:none;}

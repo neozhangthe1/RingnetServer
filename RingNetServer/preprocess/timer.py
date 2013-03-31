@@ -3,7 +3,7 @@ import urllib2
 
 def wget():
     try:
-        response = urllib2.urlopen("http://ec2.thinxer.com:18080/ringnet")
+        response = urllib2.urlopen("http://ec2.thinxer.com:18080/")
         print response.read()
     except Exception,e:
         print e
